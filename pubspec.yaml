@@ -1,0 +1,20 @@
+name: study_chat_app
+description: Ung dung nhan tin va phong thao luan hoc tap cua nhom 3 thanh vien.
+publish_to: none
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.13.5
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  # TV3 khai bao assets va dependency theo de nghi cua tung module.

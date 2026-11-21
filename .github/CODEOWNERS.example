@@ -1,0 +1,15 @@
+# Mau CHUA CO HIEU LUC. Thay @USERNAME_TV1/2/3 bang username GitHub that,
+# dam bao cac tai khoan co quyen phu hop, roi doi ten file thanh CODEOWNERS.
+# Ket hop branch protection va yeu cau code owner review tren GitHub.
+* @USERNAME_TV3
+/lib/features/auth_contacts/ @USERNAME_TV1
+/test/auth_contacts/ @USERNAME_TV1
+/docs/members/tv1/ @USERNAME_TV1
+/lib/features/realtime_chat/ @USERNAME_TV2
+/test/realtime_chat/ @USERNAME_TV2
+/docs/members/tv2/ @USERNAME_TV2
+/lib/features/study_community/ @USERNAME_TV3
+/test/study_community/ @USERNAME_TV3
+/docs/members/tv3/ @USERNAME_TV3
+/lib/core/ @USERNAME_TV1 @USERNAME_TV2 @USERNAME_TV3
+/docs/*.md @USERNAME_TV1 @USERNAME_TV2 @USERNAME_TV3
