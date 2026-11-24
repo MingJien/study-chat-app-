@@ -61,6 +61,14 @@ def stop_emulators(proc):
 class WebHandler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         name = unquote(urlsplit(self.path).path).lstrip("/") or "index.html"
+        if name == "__tv2/status":
+            payload = b'{"app":"study-chat-tv2"}'
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+            return
         try:
             with zipfile.ZipFile(self.server.archive) as archive:
                 payload = archive.read(name)
@@ -78,7 +86,7 @@ class WebHandler(http.server.BaseHTTPRequestHandler):
         except (BrokenPipeError, ConnectionResetError):
             pass
     def log_message(self, fmt, *args):
-        if args and str(args[1]) != "200":
+        if len(args) < 2 or str(args[1]) != "200":
             super().log_message(fmt, *args)
 
 def main():
@@ -90,6 +98,14 @@ def main():
     if not args.archive.is_file():
         sys.exit("Thieu preview/study-chat-web.zip. Tai artifact study-chat-tv2-web tu GitHub Actions.")
     print("TV2 START", flush=True)
+    try:
+        with urlopen(f"http://127.0.0.1:{args.port}/__tv2/status", timeout=1) as reply:
+            running = json.load(reply).get("app") == "study-chat-tv2"
+    except (OSError, ValueError):
+        running = False
+    if running and (args.web_only or emulators_ready()):
+        print(f"TV2 READY http://127.0.0.1:{args.port}", flush=True)
+        return
     with http.server.ThreadingHTTPServer(("127.0.0.1", args.port), WebHandler) as server:
         server.archive = args.archive
         proc = None

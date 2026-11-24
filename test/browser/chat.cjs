@@ -39,9 +39,9 @@ async function send(page, message) {
   await label(page,'Gửi tin nhắn').click();
 }
 async function expectText(page, text) {
-  await page.getByText(text,{exact:false}).first().waitFor({timeout:20000});
+  await page.getByText(text,{exact:false}).or(page.getByRole('group',{name:text})).first().waitFor({timeout:20000});
 }
-async function caption(page, text, seconds=11) {
+async function caption(page, text, seconds=12) {
   if (!record) return;
   await page.evaluate(text=>{
     const el=document.getElementById('demo-caption')||document.body.appendChild(document.createElement('div'));
@@ -62,9 +62,12 @@ async function waitForSessions(user, count) {
   throw Error('Presence did not reach '+count+' active session(s)');
 }
 async function connect(page, enabled) {
+  await page.bringToFront();
   await page.evaluate(enabled=>{
     const api=window.firebase_database;
-    const db=api.getDatabase(window.firebase_core.getApp());
+    const app=window.firebase_core.getApp();
+    // FlutterFire passes an explicit null database URL for its default instance.
+    const db=api.getDatabase(app,null);
     (enabled?api.goOnline:api.goOffline)(db);
   },enabled);
 }
@@ -76,9 +79,23 @@ async function run() {
   const [p,q]=await Promise.all([first.newPage(),second.newPage()]);
   const video=p.video();
   const errors=[];
-  for(const page of [p,q]) page.on('pageerror',err=>errors.push(err.message));
+  let passed=false;
+  for(const page of [p,q]) {
+    await page.route(/^https:\/\/(identitytoolkit|securetoken)\.googleapis\.com\//,route=>{
+      errors.push('Demo attempted to reach production Auth.');
+      return route.abort();
+    });
+    page.on('pageerror',err=>errors.push(err.message));
+    page.on('response',async res=>{
+      if(res.status()>=400 && res.url().includes('identitytoolkit.googleapis.com')) {
+        const failure=await res.json().catch(()=>({}));
+        console.warn('Auth response',res.status(),failure.error?.message);
+      }
+    });
+  }
   const emailA='anh-'+runId+'@example.test',emailB='minh-'+runId+'@example.test';
-  const nameA='Lan Anh',nameB='Minh Khang '+runId,roomName='Lập trình ứng dụng mobile '+runId;
+  const nameA='Lan Anh',nameB=record?'Nguyễn Minh Khang':'Minh Khang '+runId;
+  const roomName=record?'Lập trình mobile · Nhóm '+(parseInt(runId,16)%1000):'Lập trình ứng dụng mobile '+runId;
   try {
     const b=await identity('signUp',{email:emailB,password,returnSecureToken:true});
     await identity('update',{idToken:b.idToken,displayName:nameB});
@@ -109,7 +126,7 @@ async function run() {
     await p.screenshot({path:path.join(out,'chat.png')});
     await caption(p,'Tin thứ hai đến từ tài khoản ở cửa sổ còn lại. Cả hai tin dùng thời gian của Firebase.');
     const extra=await first.newPage();await extra.goto(origin);await waitForSessions(a,2);
-    await extra.close();await waitForSessions(a,1);
+    await extra.close();await p.bringToFront();await waitForSessions(a,1);
     await caption(p,'Đã đóng một tab của Lan Anh. Kết nối còn lại vẫn giữ tài khoản ở trạng thái trực tuyến.');
     await connect(p,false);await expectText(p,'Đang xem tin đã lưu');
     assert.equal(await label(p,'Gửi tin nhắn').isDisabled(),true);
@@ -149,18 +166,31 @@ async function run() {
     await p.getByRole('button',{name:new RegExp(roomName)}).first().waitFor();
     await p.screenshot({path:path.join(out,'dark.png')});
     await caption(p,'Chế độ tối và phiên đăng nhập được khôi phục sau khi tải lại trang.');
-    await label(p,'Tài khoản').click();await p.getByText('Đăng xuất',{exact:true}).click();
+    await label(p,'Tài khoản').click();await p.getByRole('menuitem',{name:'Đăng xuất'}).click();
     await label(p,'Đăng nhập').waitFor();await waitForSessions(a,0);
     await caption(p,'Đăng xuất đóng listener và dọn presence. Bản ghi đã lưu được phân vùng theo UID.',12);
+    const isolatedEmail='chi-'+runId+'@example.test';
+    const isolated=await identity('signUp',{email:isolatedEmail,password,returnSecureToken:true});
+    await identity('update',{idToken:isolated.idToken,displayName:'Chi'});
+    await database(isolated,'PUT','profiles/'+isolated.localId,{uid:isolated.localId,displayName:'Chi'});
+    await fill(p,'Email sinh viên',isolatedEmail);await fill(p,'Mật khẩu',password);await label(p,'Đăng nhập').click();
+    await waitForSessions(isolated,1);await label(p,'Tìm bạn học').waitFor();
+    await connect(p,false);await expectText(p,'Chỉ xem hội thoại đã lưu');
+    assert.equal(await p.getByRole('button',{name:new RegExp(roomName)}).count(),0);
+    await caption(p,'Chi dùng lại trình duyệt của Lan Anh. Khi ngoại tuyến, danh sách của Chi vẫn trống.');
     assert.deepEqual(errors,[]);
+    passed=true;
     console.log('PASS · registration, DM both ways, multitab presence, SQLite offline, reconnect, group, pin, theme, session and sign-out');
   } catch(e) {
-    console.error('A',await p.locator('body').ariaSnapshot(),'B',await q.locator('body').ariaSnapshot());
+    await p.screenshot({path:path.join(out,'diagnostic.png')});
+    for(const page of [p,q]) console.error((await page.locator('body').ariaSnapshot()).replaceAll(password,'[redacted]'));
     throw e;
   } finally {
-    await second.close();await first.close();await browser.close();
+    try {
+      await second.close();await first.close();
+      if(record && passed) await video.saveAs(path.join(out,'demo-tv2.webm'));
+    } finally {await browser.close();}
   }
-  if(record) await video.saveAs(path.join(out,'demo-tv2.webm'));
 }
 run().catch(e=>{console.error(e);process.exitCode=1;});
 
