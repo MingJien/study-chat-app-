@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -50,6 +51,17 @@ class _StudyChatAppState extends State<StudyChatApp> {
     theme: AppTheme.light,
     darkTheme: AppTheme.dark,
     themeMode: mode,
+    builder: (context, child) =>
+        kIsWeb &&
+            const bool.fromEnvironment('FIREBASE_EMULATOR', defaultValue: true)
+        ? ColoredBox(
+            color: Theme.of(context).colorScheme.surface,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 32),
+              child: child,
+            ),
+          )
+        : child!,
     home: StreamBuilder(
       stream: sessions,
       builder: (context, s) {

@@ -47,10 +47,11 @@ class _ChatHomeState extends State<ChatHome> {
         builder: (_, s) {
           if (s.hasError) return StatePanel(readableError(s.error));
           if (!s.hasData) return const LinearProgressIndicator();
-          if (s.requireData.isEmpty)
+          if (s.requireData.isEmpty) {
             return const StatePanel(
               'Tham gia phòng học hoặc nhắn tin với một bạn học để bắt đầu.',
             );
+          }
           return Column(
             children: [
               for (final r in s.requireData.take(5))
