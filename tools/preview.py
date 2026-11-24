@@ -31,13 +31,23 @@ def start_emulators():
     if emulators_ready():
         return None
     cli = shutil.which("npx.cmd" if os.name == "nt" else "npx")
-    if not cli or not shutil.which("java"):
+    env = dict(os.environ)
+    # Prefer the installed JDK to the Oracle javapath redirector on Windows.
+    java_home = Path(env.get("JAVA_HOME", "")) / "bin"
+    if os.name == "nt" and not (java_home / "java.exe").is_file():
+        installed = Path(env.get("ProgramFiles", "C:/Program Files")) / "Java"
+        candidates = sorted(installed.glob("jdk-*/bin/java.exe"), reverse=True)
+        if candidates:
+            java_home = candidates[0].parent
+    if (java_home / ("java.exe" if os.name == "nt" else "java")).is_file():
+        env["JAVA_HOME"] = str(java_home.parent.resolve())
+        env["PATH"] = str(java_home.resolve()) + os.pathsep + env.get("PATH", "")
+    if not cli or not shutil.which("java", path=env.get("PATH")):
         sys.exit("Can Node.js 22+ va Java 21+ de chay Firebase Emulator.")
     DATA.parent.mkdir(exist_ok=True)
-    args = [cli, "--yes", "firebase-tools@15.37.0", "emulators:start", "--only", "auth,database", "--project", PROJECT, "--export-on-exit", str(DATA)]
+    args = [cli, "--yes", "--prefer-offline", "firebase-tools@15.37.0", "emulators:start", "--only", "auth,database", "--project", PROJECT, "--export-on-exit", str(DATA)]
     if (DATA / "firebase-export-metadata.json").is_file():
         args += ["--import", str(DATA)]
-    env = dict(os.environ)
     env.setdefault("JAVA_TOOL_OPTIONS", "-Xmx192m")
     proc = subprocess.Popen(args, cwd=ROOT, env=env, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0)
     try:

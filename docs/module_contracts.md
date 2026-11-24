@@ -1,6 +1,6 @@
 # Hợp đồng giữa các module
 
-Đây là danh mục API từ tài liệu phân công, chưa phải interface Dart đã được implement. Nhóm chốt kiểu trả về, lỗi, lifecycle và nullability trước khi đưa interface chung vào `lib/core/contracts/`. Khung không tạo model trùng với module TV1 hiện có.
+Danh mục dưới đây theo tài liệu phân công. TV2 đã công bố [ChatApi](../lib/features/realtime_chat/domain/chat.dart) và [hướng dẫn ghép với TV1, TV3](members/tv2/README.md). Hai module còn lại tiếp tục dùng hợp đồng của nhóm.
 
 | Module | API cần công bố |
 | --- | --- |
@@ -18,7 +18,7 @@
 4. TV3 cập nhật notice; TV2 hiển thị notice trong ChatScreen qua API hoặc widget/callback đã thống nhất.
 5. Đăng xuất/đổi UID → AppShell bỏ navigator cũ; từng module hủy listener và chỉ đọc cache của UID hiện tại.
 
-TV3 khởi tạo Firebase một lần tại tầng app khi tích hợp. Các module nhận dependency/repository qua constructor; không tự gọi initializeApp rải rác. Khung hiện chưa có package Firebase hoặc cấu hình Firebase.
+Điểm vào ứng dụng khởi tạo Firebase một lần. TV2 nhận Auth, Database, SQLite và REST client qua constructor. Nhánh `tv2` dùng Firebase Emulator theo mặc định.
 
 ## Route dự kiến
 
@@ -34,4 +34,4 @@ TV3 khởi tạo Firebase một lần tại tầng app khi tích hợp. Các mod
 | /profile | TV1 | uid |
 | /settings | TV3 | Không |
 
-Các route này **chưa được nối**. Chỉ `/` đang mở AppShell để kiểm tra khung. Trước khi nối, chốt class tham số trong `core/navigation/`, không tự dùng Map với key khác nhau. TV3 thêm auth guard cho các route bảo vệ.
+Trên nhánh `tv2`, các route `/home`, `/chats`, `/rooms`, `/contacts`, `/settings`, `/chat` và `/profile` nằm trong Navigator theo phiên đã xác thực. Route `/chat` nhận ChatArgs, route `/profile` nhận UID. Màn đăng nhập/đăng ký đi qua Auth gate. Route chi tiết phòng thuộc bàn giao TV3.

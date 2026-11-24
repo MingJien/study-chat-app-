@@ -1,18 +1,9 @@
-# TV2 Realtime Chat và Presence
+# Realtime Chat và Presence
 
-Nhánh: `tv2`. Source chỉ trong `lib/features/realtime_chat/`; test ở `test/realtime_chat/`; ghi chú tích hợp tại `docs/members/tv2/`.
+TV2 xuất ChatApi, ChatRepository, ChatArgs, ConversationsScreen và ChatScreen từ realtime_chat.dart. ChatApi định nghĩa sáu điểm tích hợp theo phân công. ChatRepository nhận FirebaseAuth, FirebaseDatabase, ChatCache và ChatRest của một phiên qua constructor.
 
-Chat riêng, chat nhóm, danh sách hội thoại, gửi/nhận realtime, presence nhiều thiết bị, SQLite cache tối đa 30 tin mỗi hội thoại. Nhận peerUid hoặc roomId từ module khác; không quản lý thành viên phòng.
+- domain chứa định danh chat riêng, kiểu dữ liệu, kiểm tra nội dung và hợp đồng.
+- data dùng FlutterFire để nhận sự kiện và quản lý presence. Gửi tin qua Firebase REST, xác nhận bằng server và lưu cửa sổ tin vào SQLite.
+- presentation dùng StreamBuilder, ScrollController, hai loại bong bóng và điều khiển gửi. Nhấn ảnh hoặc tên để mở hồ sơ theo UID.
 
-Màn hình bàn giao: ConversationsScreen, ChatScreen, MessageBubble, ô nhập tin; các trạng thái loading/empty/error/offline.
-
-## Vị trí code
-
-- `domain/`: model/interface và quy tắc nghiệp vụ.
-- `data/`: repository, Firebase gateway, SQLite (nếu có).
-- `presentation/`: màn hình/widget/state; thay placeholder khi ghép chức năng thật.
-- `assets/`: tài nguyên riêng; đề nghị TV3 khai báo vào pubspec.
-- `integration/`: adapter và Rules fragment cho node directChats, userDirectChats, messages, presence.
-- `realtime_chat.dart`: export API công khai của module.
-
-Không sửa module người khác hoặc ghi đè pubspec/main/router. Đề nghị thay đổi file chung trong ghi chú thành viên; người tích hợp ghép. Đọc docs/module_contracts.md và docs/FILE_OWNERSHIP.md trước khi code. Placeholder hiện chỉ giúp khung app chạy, chưa có nghiệp vụ.
+Xem [hướng dẫn chạy, route và nghiệm thu TV2](../../../docs/members/tv2/README.md).

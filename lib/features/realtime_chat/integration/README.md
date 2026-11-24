@@ -1,3 +1,7 @@
 # Tích hợp TV2
 
-Đặt adapter và Rules fragment cho directChats, userDirectChats, messages, presence ở đây. Chỉ là phần Rules của module; không deploy đè Rules chung. Ghi schema, dependency, route và cách kiểm tra trong docs/members/tv2/ trước khi nhờ TV3 ghép.
+Router dùng ChatArgs.direct(peerUid), ChatArgs.room(roomId) hoặc ChatArgs.existing(summary). Quyền đọc tin và danh tính người gửi do [Firebase Rules](../../../../firebase/database.rules.json) thực thi. Các thao tác cần trạng thái kết nối hiện tại của phiên.
+
+TV3 đọc danh sách từ watchConversations(uid) và có thể ánh xạ ChatSummary sang kiểu tóm tắt của HomeScreen. Thông báo ghim đọc từ roomNotices/{roomId}. TV1 nhận UID khi người dùng chạm vào avatar hoặc tên.
+
+[Hướng dẫn TV2](../../../../docs/members/tv2/README.md)

@@ -16,7 +16,7 @@ Mọi ID là String, không dùng displayName làm khóa. UID do Firebase Auth t
 
 TV3 tạo roomId có tiền tố `room_`; chat nhóm dùng conversationId = roomId. TV2 tạo ID chat riêng có tiền tố `dm_` từ cặp UID theo thứ tự cố định. Chốt cách mã hóa để không có hai cặp UID khác nhau tạo cùng ID; có test tính đối xứng và tránh trùng. Không tự ghép chuỗi UID rời rạc tại nhiều màn hình.
 
-Bảng trên chốt đường dẫn và trường được nêu trong phân công. Cấu trúc chi tiết của bản ghi contact, membership, conversation, presence và notice cần nhóm thống nhất trước khi triển khai Rules/API; khung chưa tự thêm quyết định nghiệp vụ.
+Nhánh TV2 dùng `directChats/{cid} = {first, second}` với hai UID đã sắp và `userDirectChats/{uid}/{cid} = true` cho mỗi người. Mỗi session ghi true tại `presence/{uid}/sessions/{key}` và cập nhật `lastSeen` khi ngắt kết nối. Rules kiểm tra truy vấn tin theo `createdAt`, giới hạn tối đa 30. Đối chiếu [bộ Rules](../firebase/database.rules.json) khi tích hợp.
 
 ## SQLite
 

@@ -1,6 +1,12 @@
 # Study Chat App
 
-Khung Flutter Android cho nhóm 3 người, theo tài liệu phân công ngày 14/11/2026. Repository gốc khi tạo khung chỉ có README; các nhánh `main`, `develop`, `tv1`, `tv2`, `tv3` cùng ở commit `17823a6`. Cấu trúc bám theo Phụ lục A của tài liệu.
+Ứng dụng thảo luận học tập bằng Flutter và Firebase. Nhánh `tv2` triển khai chat riêng, chat phòng, trạng thái hoạt động và lịch sử SQLite trên bộ khung chung ở `develop`.
+
+## Chạy TV2 trong VS Code
+
+Mở thư mục này, chọn **Run and Debug → TV2 · Mở Study Chat trong trình duyệt** và nhấn **F5**. Bản web đã biên dịch dùng Firebase Emulator trên máy. Có thể chạy cùng cấu hình bằng `python tools/preview.py` rồi mở <http://127.0.0.1:8765>.
+
+Xem [hướng dẫn TV2 và tài liệu bàn giao](docs/members/tv2/README.md) để tạo hai tài khoản thử, mở phòng và kiểm tra khi mất mạng.
 
 ## Chia phần việc
 
@@ -50,7 +56,7 @@ study-chat-app-/
 
 Mỗi feature có `data/`, `domain/`, `presentation/`, `assets/`, `integration/` và file export. Thư mục chưa có code giữ bằng `.gitkeep` để Git đưa lên đầy đủ.
 
-## Chạy khung ứng dụng
+## Phát triển mã Flutter của nhóm
 
 Mốc công cụ: Flutter **3.47.7**, Dart **3.13.5**, Android SDK tương thích Flutter. Nên clone vào đường dẫn không dấu, ví dụ `C:/projects/study-chat-app`.
 
@@ -61,9 +67,7 @@ flutter test
 flutter run
 ```
 
-App có 5 tab để kiểm tra kết nối module; từng tab ghi rõ chức năng chưa triển khai. Khung chưa đăng nhập, chưa kết nối Firebase và chưa có dữ liệu thật. Chỉ route `/` đã nối; route nghiệp vụ chờ tích hợp. Theme theo hệ thống; chức năng chọn/lưu theme do TV3 triển khai sau.
-
-Đã kiểm tra khung bằng `dart format`, `flutter analyze` (không có lỗi) và `flutter test` (1 smoke test chuyển đủ 5 tab). Analyzer Flutter 3.47.7 gặp `FormatException` khi chạy trong đường dẫn có dấu tiếng Việt của workspace; analyze/test đã chạy đạt trên bản sao tạm có đường dẫn ASCII. Nếu gặp lỗi tương tự, dùng bản clone trong đường dẫn không dấu như gợi ý trên. Chưa kiểm tra build APK hoặc nghiệp vụ Firebase.
+Các lệnh Flutter ở trên dành cho máy phát triển của nhóm. Quy trình F5 ở đầu trang dùng bản web đóng gói. GitHub Actions xây dựng và kiểm tra bản web từ mã Dart.
 
 ## Bắt đầu làm nhóm
 

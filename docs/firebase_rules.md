@@ -1,6 +1,6 @@
 # Phối hợp Firebase và Security Rules
 
-Khung chưa có Firebase project, file cấu hình hay Rules deploy. Mỗi thành viên đặt Rules fragment và hướng dẫn kiểm tra của mình trong `lib/features/<module>/integration/`. TV3 ghép thành Rules chung sau khi ba người review, không triển khai nguyên file Rules test của một module đè toàn bộ database.
+Nhánh `tv2` dùng [Rules cho Firebase Emulator](../firebase/database.rules.json) cùng project `demo-classroom-tv2`. Bộ [kiểm thử Auth và RTDB](../test/emulator/chat.test.mjs) thực hiện các thao tác bằng tài khoản thử. Khi ghép ứng dụng, TV3 tổng hợp quyền của ba module và chạy lại các ca kiểm thử trên Rules cuối.
 
 | Thành viên | Node phụ trách |
 | --- | --- |
@@ -12,4 +12,4 @@ Trước khi ghép: chốt schema chi tiết, quyền từng path, index query v
 
 Không dùng Rules mở toàn cục để chữa lỗi permission. Firebase config được người tích hợp tạo khi đã chọn project; `firebase_options.dart`, `google-services.json` và file sinh trên máy đã được ignore theo quy ước repo. Các file này không phải mọi trường hợp đều là bí mật, nhưng phải phân biệt với private key của service account và thống nhất cách cấp cấu hình dev cho nhóm. Không commit mật khẩu, service-account private key, keystore hoặc .env thật.
 
-Dependency Firebase/SQLite thêm vào pubspec ở PR tích hợp. Không chạy FlutterFire configure độc lập trên ba nhánh rồi chép đè cấu hình Android.
+Phiên bản FlutterFire và SQLite của TV2 đã có trong pubspec.lock. Nhóm thống nhất cấu hình Firebase thật khi tích hợp.

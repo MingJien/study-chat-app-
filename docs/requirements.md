@@ -14,4 +14,4 @@ Bản đầu chỉ nhắn văn bản tối đa 500 ký tự; offline chỉ xem c
 
 Chưa triển khai ảnh/file trong chat, gọi thoại/video, mạng xã hội, AI chatbot, thông báo đẩy, sửa/xóa/thu hồi tin nhắn, chuyển quyền hoặc xóa phòng.
 
-Khung hiện tại chỉ thiết lập vị trí code và màn hình placeholder; ba module nghiệp vụ do các thành viên hoàn thiện. REST API ngoài chưa phải yêu cầu đề tài đã chốt; xác nhận với giảng viên trước khi mở rộng phạm vi.
+Trên nhánh `tv2`, module hội thoại chạy với Firebase Auth, Realtime Database, REST API của RTDB và SQLite. Hai điểm ghép hồ sơ và phòng cho phép demo độc lập trước khi tích hợp phiên bản đầy đủ của TV1 và TV3. [Hồ sơ bàn giao và kết quả kiểm thử TV2](members/tv2/README.md).

@@ -1,6 +1,6 @@
 # Kiểm thử tích hợp
 
-Chuẩn bị ba tài khoản A/B/C, ít nhất hai thiết bị hoặc emulator. Các trường hợp dưới đây lấy từ phân công, **chưa được nghiệm thu**; smoke test hiện chỉ kiểm tra khung 5 tab.
+Các trường hợp dưới đây là tiêu chí nghiệm thu toàn nhóm. Kết quả, môi trường và phần việc đã kiểm của TV2 nằm trong [hồ sơ TV2](members/tv2/README.md). Dùng A/B/C và các phiên độc lập để kiểm tra luồng liên tài khoản.
 
 | Mã | Tình huống | Kết quả cần đạt |
 | --- | --- | --- |

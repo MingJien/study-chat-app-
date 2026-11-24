@@ -13,8 +13,11 @@
       "problemMatcher": {
         "owner": "tv2",
         "pattern": {
-          "regexp": "^(?!)((.*))$",
-          "message": 1
+          "regexp": "^(.*):(\\d+):(\\d+): (.*)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "message": 4
         },
         "background": {
           "activeOnStart": true,
