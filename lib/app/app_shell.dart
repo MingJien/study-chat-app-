@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../features/realtime_chat/data/chat_repository.dart';
 import '../features/realtime_chat/presentation/conversations_screen.dart';
 import 'chat_directory.dart';
+import 'chat_home.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell(
@@ -10,15 +11,17 @@ class AppShell extends StatefulWidget {
     super.key,
     required this.changeTheme,
     required this.logout,
+    this.initialTab = 2,
   });
   final ChatRepository repo;
+  final int initialTab;
   final VoidCallback changeTheme, logout;
   @override
   State<AppShell> createState() => _AppShellState();
 }
 
 class _AppShellState extends State<AppShell> {
-  int tab = 0;
+  late int tab = widget.initialTab;
   @override
   Widget build(BuildContext context) {
     final repo = widget.repo;
@@ -78,9 +81,42 @@ class _AppShellState extends State<AppShell> {
                 ),
                 Expanded(
                   child: switch (tab) {
-                    0 => ConversationsScreen(
+                    0 => ChatHome(repo, (i) => setState(() => tab = i)),
+                    2 => ConversationsScreen(
                       repo,
-                      onNew: () => setState(() => tab = 2),
+                      onNew: () => setState(() => tab = 3),
+                    ),
+                    4 => ListView(
+                      padding: const EdgeInsets.all(20),
+                      children: [
+                        Text(
+                          'Cá nhân',
+                          style: Theme.of(context).textTheme.headlineMedium,
+                        ),
+                        ListTile(
+                          leading: const Icon(Icons.person_outline),
+                          title: Text(
+                            repo.auth.currentUser?.displayName ??
+                                'Hồ sơ của tôi',
+                          ),
+                          onTap: () => Navigator.pushNamed(
+                            context,
+                            '/profile',
+                            arguments: repo.uid,
+                          ),
+                        ),
+                        SwitchListTile(
+                          title: const Text('Giao diện tối'),
+                          value:
+                              Theme.of(context).brightness == Brightness.dark,
+                          onChanged: (_) => widget.changeTheme(),
+                        ),
+                        ListTile(
+                          leading: const Icon(Icons.logout),
+                          title: const Text('Đăng xuất'),
+                          onTap: widget.logout,
+                        ),
+                      ],
                     ),
                     _ => ChatDirectory(
                       repo,
@@ -99,9 +135,8 @@ class _AppShellState extends State<AppShell> {
         onDestinationSelected: (i) => setState(() => tab = i),
         destinations: const [
           NavigationDestination(
-            icon: Icon(Icons.chat_bubble_outline),
-            selectedIcon: Icon(Icons.chat_bubble),
-            label: 'Tin nhắn',
+            icon: Icon(Icons.home_outlined),
+            label: 'Trang chủ',
           ),
           NavigationDestination(
             icon: Icon(Icons.school_outlined),
@@ -109,9 +144,18 @@ class _AppShellState extends State<AppShell> {
             label: 'Phòng học',
           ),
           NavigationDestination(
+            icon: Icon(Icons.chat_bubble_outline),
+            selectedIcon: Icon(Icons.chat_bubble),
+            label: 'Tin nhắn',
+          ),
+          NavigationDestination(
             icon: Icon(Icons.people_outline),
             selectedIcon: Icon(Icons.people),
             label: 'Bạn học',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            label: 'Cá nhân',
           ),
         ],
       ),

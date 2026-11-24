@@ -378,7 +378,7 @@ class MessageBubble extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  SelectableText(message.content),
+                  Text(message.content),
                   const SizedBox(height: 3),
                   Text(
                     timeLabel(message.createdAt, full: true),

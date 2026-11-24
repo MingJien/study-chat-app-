@@ -27,11 +27,7 @@ class ChatRest {
       throw const ChatFailure('Cần đăng nhập lại.');
     }
     final uri = endpoint.replace(
-      pathSegments: [
-        if (path.isNotEmpty)
-          ...path.split('/').take(path.split('/').length - 1),
-        '${path.split('/').last}.json',
-      ],
+      pathSegments: '$path.json'.split('/'),
       queryParameters: {...endpoint.queryParameters, 'auth': token},
     );
     final request = http.Request(method, uri);

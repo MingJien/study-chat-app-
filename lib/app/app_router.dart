@@ -15,8 +15,22 @@ class AppRouter {
     settings: settings,
     builder: (_) {
       final args = settings.arguments;
-      if (settings.name == '/' || settings.name == '/chats') {
-        return AppShell(repo, changeTheme: changeTheme, logout: logout);
+      const tabs = {
+        '/': 2,
+        '/chats': 2,
+        '/home': 0,
+        '/rooms': 1,
+        '/contacts': 3,
+        '/settings': 4,
+      };
+      final tab = tabs[settings.name];
+      if (tab != null) {
+        return AppShell(
+          repo,
+          changeTheme: changeTheme,
+          logout: logout,
+          initialTab: tab,
+        );
       }
       if (settings.name == '/profile' && args is String) {
         return PublicProfile(repo, args);
