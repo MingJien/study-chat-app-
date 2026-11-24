@@ -2,6 +2,12 @@
 
 Chủ trì: TV3 Study Community và App UI. Mỗi người chỉ cập nhật thư mục ghi chú của mình để giảm đụng cùng file.
 
+## Quy trình chuẩn TV3
+
+- Sổ tay quy trình làm việc: [WORKFLOW.md](WORKFLOW.md) (kết hợp Superpowers với `docs/GIT_WORKFLOW.md`, `docs/FILE_OWNERSHIP.md` và CI).
+- Thiết kế từng đợt: [specs/](specs/)
+- Kế hoạch triển khai: [plans/](plans/)
+
 ## Yêu cầu đang chờ
 
 Chưa có. Khi cần, thêm một mục nêu package + phiên bản và lý do; assets cần khai báo; API/kiểu trả về; route + tham số; node Rules/index; file chung bị ảnh hưởng và cách kiểm tra. TV3 ghép thay đổi đã thống nhất trong PR tích hợp.
@@ -9,3 +15,12 @@ Chưa có. Khi cần, thêm một mục nêu package + phiên bản và lý do; 
 ## Bàn giao
 
 Ghi PR/Issue, chức năng hoàn thành, lệnh kiểm tra và kết quả thật, ảnh/video minh chứng, phần còn thiếu. Không ghi “đã kiểm tra” khi mới có khung.
+
+### 24/11/2026 — Thiết lập quy trình chuẩn TV3 trên nhánh `tv3`
+- **Phạm vi:** Đồng bộ nhánh `tv3` từ `origin/develop` (`3e8acb7`), cấu hình `.worktrees/` trong `.git/info/exclude` cục bộ và thiết lập tài liệu quy trình trong `docs/members/tv3/`. Chưa chuyển code tính năng từ `classroom_chat_tv3_preview`.
+- **Kiểm chứng baseline đã chạy:**
+  - `flutter pub get --enforce-lockfile`: thành công (exit code 0).
+  - `dart format --output=none --set-exit-if-changed lib test`: `Formatted 13 files (0 changed)` (exit code 0).
+  - `flutter analyze --no-pub`: `No issues found!` (exit code 0).
+  - `flutter test --no-pub`: `test/app/app_smoke_test.dart` pass (`1 test passed`, 0 failures).
+- **Chưa thực hiện:** Chuyển mã nguồn TV3-02/03/04 sang `lib/features/study_community/`, kiểm thử trên emulator/Firebase, `git push` lên remote.
