@@ -11,11 +11,15 @@ class RoomsScreen extends StatefulWidget {
     required this.repository,
     required this.currentUserId,
     this.onOpenDiscussion,
+    this.onOpenProfile,
+    this.onOpenDirectMessage,
   });
 
   final RoomRepository repository;
   final String currentUserId;
   final OpenRoomDiscussion? onOpenDiscussion;
+  final OpenUserProfile? onOpenProfile;
+  final OpenDirectMessage? onOpenDirectMessage;
 
   @override
   State<RoomsScreen> createState() => _RoomsScreenState();
@@ -43,6 +47,8 @@ class _RoomsScreenState extends State<RoomsScreen> {
           repository: widget.repository,
           currentUserId: widget.currentUserId,
           onOpenDiscussion: widget.onOpenDiscussion,
+          onOpenProfile: widget.onOpenProfile,
+          onOpenDirectMessage: widget.onOpenDirectMessage,
         ),
       ),
     );
@@ -56,6 +62,8 @@ class _RoomsScreenState extends State<RoomsScreen> {
           repository: widget.repository,
           currentUserId: widget.currentUserId,
           onOpenDiscussion: widget.onOpenDiscussion,
+          onOpenProfile: widget.onOpenProfile,
+          onOpenDirectMessage: widget.onOpenDirectMessage,
         ),
       ),
     );

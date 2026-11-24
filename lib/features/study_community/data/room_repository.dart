@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../domain/study_room_models.dart';
@@ -85,8 +87,61 @@ class RoomRepository extends ChangeNotifier {
 
   UserProfile? profileOf(String uid) => _profiles[uid];
 
-  String creatorNameOf(StudyRoom room) =>
-      profileOf(room.ownerId)?.displayName ?? 'Người dùng ẩn danh';
+  String displayNameOf(String uid) =>
+      profileOf(uid)?.displayName ?? 'Người dùng ẩn danh';
+
+  String creatorNameOf(StudyRoom room) => displayNameOf(room.ownerId);
+
+  String avatarIdOf(String uid) {
+    final avatarId = profileOf(uid)?.avatarId.trim() ?? '';
+    return avatarId.isEmpty ? UserProfile.defaultAvatarId : avatarId;
+  }
+
+  List<RoomMember> membersOf(String roomId) {
+    final room = roomOf(roomId);
+    final members = _membersByRoom[roomId];
+    if (room == null || members == null || members.isEmpty) {
+      return const [];
+    }
+
+    final sorted = members.values.toList()
+      ..sort((a, b) {
+        final aIsOwner = a.role == RoomRole.owner || a.uid == room.ownerId;
+        final bIsOwner = b.role == RoomRole.owner || b.uid == room.ownerId;
+        if (aIsOwner != bIsOwner) return aIsOwner ? -1 : 1;
+
+        final nameCompare = displayNameOf(a.uid)
+            .toLowerCase()
+            .compareTo(displayNameOf(b.uid).toLowerCase());
+        if (nameCompare != 0) return nameCompare;
+
+        return a.uid.compareTo(b.uid);
+      });
+    return List.unmodifiable(sorted);
+  }
+
+  Stream<List<RoomMember>> watchRoomMembers(String roomId) {
+    late final StreamController<List<RoomMember>> controller;
+    void emit() {
+      if (!controller.isClosed) {
+        controller.add(membersOf(roomId));
+      }
+    }
+
+    controller = StreamController<List<RoomMember>>(
+      onListen: () {
+        emit();
+        addListener(emit);
+      },
+      onCancel: () async {
+        removeListener(emit);
+        if (!controller.isClosed) {
+          await controller.close();
+        }
+      },
+    );
+    return controller.stream;
+  }
 
   List<StudyRoom> searchRooms(String query) {
     final normalizedQuery = query.trim().toLowerCase();

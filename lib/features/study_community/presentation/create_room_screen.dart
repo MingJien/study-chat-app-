@@ -10,11 +10,15 @@ class CreateRoomScreen extends StatefulWidget {
     required this.repository,
     required this.currentUserId,
     this.onOpenDiscussion,
+    this.onOpenProfile,
+    this.onOpenDirectMessage,
   });
 
   final RoomRepository repository;
   final String currentUserId;
   final OpenRoomDiscussion? onOpenDiscussion;
+  final OpenUserProfile? onOpenProfile;
+  final OpenDirectMessage? onOpenDirectMessage;
 
   @override
   State<CreateRoomScreen> createState() => _CreateRoomScreenState();
@@ -62,6 +66,8 @@ class _CreateRoomScreenState extends State<CreateRoomScreen> {
           repository: repository,
           currentUserId: widget.currentUserId,
           onOpenDiscussion: widget.onOpenDiscussion,
+          onOpenProfile: widget.onOpenProfile,
+          onOpenDirectMessage: widget.onOpenDirectMessage,
         ),
       ),
     );

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/room_repository.dart';
 import '../domain/study_room_models.dart';
+import 'room_members_screen.dart';
 
 class RoomDetailScreen extends StatefulWidget {
   const RoomDetailScreen({
@@ -10,12 +11,16 @@ class RoomDetailScreen extends StatefulWidget {
     required this.repository,
     required this.currentUserId,
     this.onOpenDiscussion,
+    this.onOpenProfile,
+    this.onOpenDirectMessage,
   });
 
   final StudyRoom room;
   final RoomRepository repository;
   final String currentUserId;
   final OpenRoomDiscussion? onOpenDiscussion;
+  final OpenUserProfile? onOpenProfile;
+  final OpenDirectMessage? onOpenDirectMessage;
 
   RoomMember? get creator => repository.memberOf(room.roomId, room.ownerId);
 
@@ -143,6 +148,26 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
                   trailing: const Text('Chủ phòng'),
                 ),
                 Text('${repository.memberCountOf(room.roomId)} thành viên'),
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: _locked
+                      ? null
+                      : () {
+                          Navigator.of(context).push<void>(
+                            MaterialPageRoute(
+                              builder: (context) => RoomMembersScreen(
+                                room: room,
+                                repository: repository,
+                                currentUserId: widget.currentUserId,
+                                onOpenProfile: widget.onOpenProfile,
+                                onOpenDirectMessage: widget.onOpenDirectMessage,
+                              ),
+                            ),
+                          );
+                        },
+                  icon: const Icon(Icons.group_outlined),
+                  label: const Text('Xem thành viên'),
+                ),
                 const SizedBox(height: 16),
                 if (isOwner) const Text('Bạn là chủ phòng'),
                 if (member != null && !isOwner) const Text('Đã tham gia'),

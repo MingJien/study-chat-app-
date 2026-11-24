@@ -8,10 +8,17 @@ class RoomMembershipException implements Exception {
 }
 
 class UserProfile {
-  const UserProfile({required this.uid, required this.displayName});
+  static const String defaultAvatarId = 'avatar_default';
+
+  const UserProfile({
+    required this.uid,
+    required this.displayName,
+    this.avatarId = defaultAvatarId,
+  });
 
   final String uid;
   final String displayName;
+  final String avatarId;
 }
 
 class StudyRoom {
@@ -45,3 +52,9 @@ typedef OpenRoomDiscussion = Future<void> Function({
   required String roomId,
   required String type,
 });
+
+/// TV1 supplies ProfileScreen navigation by UID.
+typedef OpenUserProfile = Future<void> Function({required String uid});
+
+/// TV2 supplies direct chat navigation via openDirectConversation(peerUid).
+typedef OpenDirectMessage = Future<void> Function({required String peerUid});

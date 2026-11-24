@@ -10,9 +10,21 @@ RoomRepository createPreviewRoomRepository() {
 
   return RoomRepository(
     profiles: const {
-      previewUid: UserProfile(uid: previewUid, displayName: 'Bạn (TV3)'),
-      linhUid: UserProfile(uid: linhUid, displayName: 'Nguyễn Khánh Linh'),
-      minhUid: UserProfile(uid: minhUid, displayName: 'Trần Nhật Minh'),
+      previewUid: UserProfile(
+        uid: previewUid,
+        displayName: 'Bạn (TV3)',
+        avatarId: 'avatar_tv3',
+      ),
+      linhUid: UserProfile(
+        uid: linhUid,
+        displayName: 'Nguyễn Khánh Linh',
+        avatarId: 'avatar_linh',
+      ),
+      minhUid: UserProfile(
+        uid: minhUid,
+        displayName: 'Trần Nhật Minh',
+        avatarId: 'avatar_minh',
+      ),
     },
     initialRooms: [
       StudyRoom(
