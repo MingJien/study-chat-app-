@@ -1,10 +1,14 @@
 export 'data/preview_room_repository.dart';
 export 'data/room_repository.dart';
+export 'data/theme_controller.dart';
 export 'domain/study_room_models.dart';
 export 'presentation/community_placeholder.dart';
 export 'presentation/create_room_screen.dart';
+export 'presentation/home_screen.dart';
 export 'presentation/member_avatar.dart';
 export 'presentation/pinned_notice_banner.dart';
 export 'presentation/room_detail_screen.dart';
 export 'presentation/room_members_screen.dart';
 export 'presentation/rooms_screen.dart';
+export 'presentation/settings_screen.dart';
+export 'presentation/study_community_decorations.dart';

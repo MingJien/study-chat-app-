@@ -11,6 +11,7 @@ Chủ trì: TV3 Study Community và App UI. Mỗi người chỉ cập nhật th
 ## Yêu cầu đang chờ
 
 - **Assets avatar dựng sẵn (chờ PR tích hợp dùng chung):** Sau khi TV1 và TV3 thống nhất bộ file ảnh PNG avatar dùng chung, đề nghị khai báo `lib/features/study_community/assets/avatars/` (hoặc thư mục assets chung đã thống nhất) trong `pubspec.yaml` ở PR tích hợp riêng. Hiện tại `MemberAvatar` dùng `avatarId` với fallback an toàn theo màu/ký tự đại diện nên không sửa `pubspec.yaml` trên nhánh `tv3`.
+- **Lưu lựa chọn Dark/Light Mode bền vững (`shared_preferences`, chờ PR TV3-08):** Đề nghị thêm dependency `shared_preferences` vào `pubspec.yaml` trên nhánh tích hợp `integration/tv3-app-shell` để triển khai `ThemeModeStore` lưu `ThemeMode` xuống thiết bị khi tắt/mở lại app (T22). Hiện tại `ThemeController` dùng `InMemoryThemeModeStore` trên nhánh `tv3`.
 
 ## Bàn giao
 
@@ -48,3 +49,11 @@ Ghi PR/Issue, chức năng hoàn thành, lệnh kiểm tra và kết quả thậ
   - `flutter analyze --no-pub`: `No issues found!` (exit code 0).
   - `flutter test --no-pub`: `38 tests passed` (`1` test trong `test/app/app_smoke_test.dart` + `37` tests trong `test/study_community/`, gồm 8 test mới ở `pinned_notice_test.dart`, exit code 0).
 - **Giới hạn hiện tại:** Dữ liệu ghim vẫn nằm trong bộ nhớ (`RoomRepository`, `createPreviewRoomRepository()`), chưa nối Firebase Realtime Database `/roomNotices/{roomId}` / Security Rules và chờ gắn `PinnedNoticeBanner` hoặc `watchPinnedNotice` vào `ChatScreen` TV2 khi tích hợp. Chưa kiểm thử trực tiếp trên emulator trong đợt này.
+
+### 24/11/2026 — TV3-01 `HomeScreen` & TV3-07 Theme/`SettingsScreen`
+- **Phạm vi:** Thêm `RecentConversationSummary` và `OpenConversationSummary` trong `domain/`, triển khai `ThemeModeStore`, `InMemoryThemeModeStore` và `ThemeController` trong `data/theme_controller.dart`, tạo `studyCommunityCardDecoration` (`BoxDecoration` dùng chung Light/Dark), `SettingsScreen` (chuyển Hệ thống/Sáng/Tối, đầu nối hồ sơ & đăng xuất TV1) và `HomeScreen` (lời chào sinh viên, lối tắt 4 khu vực, phòng đã tham gia + empty state, phòng mới/nổi bật, hội thoại gần đây từ TV2, trạng thái loading/error/retry).
+- **Kiểm chứng đã chạy:**
+  - `dart format --output=none --set-exit-if-changed lib/features/study_community test/study_community`: `Formatted 23 files (0 changed)` (exit code 0).
+  - `flutter analyze --no-pub`: `No issues found!` (exit code 0).
+  - `flutter test --no-pub`: `48 tests passed` (`1` test trong `test/app/app_smoke_test.dart` + `47` tests trong `test/study_community/`, gồm 10 test mới ở `theme_settings_test.dart` và `home_screen_test.dart`, exit code 0).
+- **Giới hạn hiện tại:** `ThemeController` dùng `InMemoryThemeModeStore` trên nhánh `tv3` (chờ gắn `shared_preferences` ở PR TV3-08); `AppShell` / `AppRouter` (`lib/app/**`) chưa chỉnh trên `tv3` theo đúng quy ước phân quyền file; hội thoại gần đây và hồ sơ/đăng xuất nhận qua đầu nối TV1/TV2. Chưa kiểm thử trực tiếp trên emulator trong đợt này.

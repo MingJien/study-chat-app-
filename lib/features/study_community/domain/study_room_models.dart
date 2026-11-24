@@ -79,3 +79,25 @@ class RoomNotice {
   final String updatedBy;
   final DateTime updatedAt;
 }
+
+class RecentConversationSummary {
+  const RecentConversationSummary({
+    required this.conversationId,
+    required this.title,
+    required this.lastMessage,
+    required this.isGroup,
+    required this.updatedAt,
+    this.avatarId = UserProfile.defaultAvatarId,
+  });
+
+  final String conversationId;
+  final String title;
+  final String lastMessage;
+  final bool isGroup;
+  final DateTime updatedAt;
+  final String avatarId;
+}
+
+typedef OpenConversationSummary = Future<void> Function(
+  RecentConversationSummary conversation,
+);
