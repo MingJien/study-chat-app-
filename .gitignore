@@ -63,3 +63,10 @@ app.*.map.json
 **/*.jks
 **/*.keystore
 /local.properties
+/web/firebase-sdk/
+/web/sqlite3.wasm
+/web/sqflite_sw.js
+/web/sqflite_sw.js.map
+/.sqlite/
+/docs/~$*
+/.local-data/

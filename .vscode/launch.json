@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "TV2 · Mở Study Chat trong trình duyệt",
+      "type": "msedge",
+      "request": "launch",
+      "url": "http://127.0.0.1:8765",
+      "webRoot": "${workspaceFolder}",
+      "preLaunchTask": "TV2 · Web và Firebase Emulator"
+    }
+  ]
+}

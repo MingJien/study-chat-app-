@@ -1,25 +1,35 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:study_chat_app/app/app.dart';
+import 'package:study_chat_app/features/realtime_chat/domain/chat.dart';
+import 'package:study_chat_app/features/realtime_chat/presentation/chat_screen.dart';
 
 void main() {
-  testWidgets('AppShell opens all five module entry points', (tester) async {
-    await tester.pumpWidget(const StudyChatApp());
-    expect(find.text('Không gian học tập'), findsOneWidget);
-
-    const expectedTitles = [
-      'Không gian học tập',
-      'Phòng thảo luận',
-      'Hội thoại',
-      'Danh bạ bạn học',
-      'Tài khoản và hồ sơ',
-    ];
-
-    for (var index = 0; index < expectedTitles.length; index++) {
-      await tester.tap(find.byType(NavigationDestination).at(index));
-      await tester.pumpAndSettle();
-      expect(find.text(expectedTitles[index]), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    }
+  testWidgets('T24 · bong bóng tin dài vừa màn hình hẹp, chạm tên mở hồ sơ', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 500);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    var opened = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: MessageBubble(
+              message: ChatMessage('m', 'u', 'a' * 500, 100),
+              own: false,
+              showAuthor: true,
+              profile: null,
+              fallback: 'Minh',
+              onProfile: () => opened = true,
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Minh'));
+    expect(opened, true);
+    expect(tester.takeException(), isNull);
   });
 }

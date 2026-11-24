@@ -1,0 +1,31 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "TV2 · Web và Firebase Emulator",
+      "type": "process",
+      "command": "python",
+      "args": [
+        "-u",
+        "tools/preview.py"
+      ],
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "tv2",
+        "pattern": {
+          "regexp": "^(?!)((.*))$",
+          "message": 1
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^TV2 START",
+          "endsPattern": "^TV2 READY"
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      }
+    }
+  ]
+}

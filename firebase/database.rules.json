@@ -1,0 +1,118 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "profiles": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null && auth.uid == $uid && newData.exists()",
+        ".validate": "newData.hasChildren(['uid','displayName']) && newData.child('uid').val() == $uid && newData.child('displayName').isString() && newData.child('displayName').val().length > 0 && newData.child('displayName').val().length <= 50",
+        "avatarId": {
+          ".validate": "newData.isString() && newData.val().length <= 64"
+        },
+        "email": {
+          ".validate": "newData.isString() && newData.val().length <= 254"
+        },
+        "className": {
+          ".validate": "newData.isString() && newData.val().length <= 50"
+        },
+        "bio": {
+          ".validate": "newData.isString() && newData.val().length <= 150"
+        }
+      }
+    },
+    "rooms": {
+      ".read": "auth != null",
+      "$roomId": {
+        ".write": "auth != null && !data.exists() && $roomId.beginsWith('room_') && newData.child('ownerId').val() == auth.uid",
+        ".validate": "newData.hasChildren(['roomId','roomName','subject','ownerId','createdAt']) && newData.child('roomId').val() == $roomId && newData.child('roomName').isString() && newData.child('roomName').val().length > 0 && newData.child('roomName').val().length <= 60 && newData.child('createdAt').val() == now",
+        "subject": {
+          ".validate": "newData.isString() && newData.val().length <= 60"
+        },
+        "description": {
+          ".validate": "newData.isString() && newData.val().length <= 200"
+        }
+      }
+    },
+    "roomMembers": {
+      "$roomId": {
+        "$uid": {
+          ".read": "auth != null",
+          ".write": "auth != null && auth.uid == $uid && $roomId.beginsWith('room_') && newData.parent().parent().parent().child('rooms').child($roomId).exists() && (newData.exists() || root.child('rooms').child($roomId).child('ownerId').val() != auth.uid)",
+          ".validate": "newData.child('uid').val() == $uid && ((newData.child('role').val() == 'owner' && newData.parent().parent().parent().child('rooms').child($roomId).child('ownerId').val() == $uid) || (newData.child('role').val() == 'member' && newData.parent().parent().parent().child('rooms').child($roomId).child('ownerId').val() != $uid))"
+        }
+      }
+    },
+    "roomNotices": {
+      "$cid": {
+        ".read": "auth != null && root.child('roomMembers').child($cid).child(auth.uid).exists()",
+        ".write": "auth != null && root.child('rooms').child($cid).child('ownerId').val() == auth.uid",
+        ".validate": "newData.child('roomId').val() == $cid && newData.child('updatedBy').val() == auth.uid && newData.child('updatedAt').val() == now && newData.child('content').isString() && newData.child('content').val().length > 0 && newData.child('content').val().length <= 300"
+      }
+    },
+    "directChats": {
+      "$cid": {
+        ".read": "auth != null && (data.child('first').val() == auth.uid || data.child('second').val() == auth.uid)",
+        ".write": "auth != null && newData.exists() && (newData.child('first').val() == auth.uid || newData.child('second').val() == auth.uid) && (!data.exists() || (data.child('first').val() == newData.child('first').val() && data.child('second').val() == newData.child('second').val()))",
+        ".validate": "newData.hasChildren(['first','second']) && newData.child('first').val() < newData.child('second').val() && root.child('profiles').child(newData.child('first').val()).exists() && root.child('profiles').child(newData.child('second').val()).exists() && $cid == 'dm_' + newData.child('first').val().replace('%','%25').replace('|','%7C') + '|' + newData.child('second').val().replace('%','%25').replace('|','%7C')",
+        "first": {
+          ".validate": "newData.isString()"
+        },
+        "second": {
+          ".validate": "newData.isString()"
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    },
+    "userDirectChats": {
+      "$uid": {
+        ".read": "auth != null && auth.uid == $uid",
+        "$cid": {
+          ".write": "auth != null && newData.val() == true && (newData.parent().parent().parent().child('directChats').child($cid).child('first').val() == $uid || newData.parent().parent().parent().child('directChats').child($cid).child('second').val() == $uid) && (newData.parent().parent().parent().child('directChats').child($cid).child('first').val() == auth.uid || newData.parent().parent().parent().child('directChats').child($cid).child('second').val() == auth.uid)"
+        }
+      }
+    },
+    "messages": {
+      "$cid": {
+        ".indexOn": [
+          "createdAt"
+        ],
+        ".read": "auth != null && (((root.child('directChats').child($cid).child('first').val() == auth.uid || root.child('directChats').child($cid).child('second').val() == auth.uid)) || ($cid.beginsWith('room_') && root.child('roomMembers').child($cid).child(auth.uid).exists())) && query.orderByChild == 'createdAt' && query.limitToLast != null && query.limitToLast <= 30",
+        "$mid": {
+          ".read": "auth != null && (((root.child('directChats').child($cid).child('first').val() == auth.uid || root.child('directChats').child($cid).child('second').val() == auth.uid)) || ($cid.beginsWith('room_') && root.child('roomMembers').child($cid).child(auth.uid).exists()))",
+          ".write": "auth != null && (((root.child('directChats').child($cid).child('first').val() == auth.uid || root.child('directChats').child($cid).child('second').val() == auth.uid)) || ($cid.beginsWith('room_') && root.child('roomMembers').child($cid).child(auth.uid).exists())) && !data.exists() && newData.exists()",
+          ".validate": "newData.hasChildren(['senderId','content','createdAt'])",
+          "senderId": {
+            ".validate": "newData.val() == auth.uid"
+          },
+          "content": {
+            ".validate": "newData.isString() && newData.val().length <= 500 && newData.val().replace(' ', '').replace('\\t', '').replace('\\r', '').replace('\\n', '').replace(' ', '').length > 0"
+          },
+          "createdAt": {
+            ".validate": "newData.val() == now"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    },
+    "presence": {
+      "$uid": {
+        ".read": "auth != null",
+        "sessions": {
+          "$session": {
+            ".write": "auth != null && auth.uid == $uid",
+            ".validate": "newData.val() == true"
+          }
+        },
+        "lastSeen": {
+          ".write": "auth != null && auth.uid == $uid",
+          ".validate": "newData.val() == now"
+        }
+      }
+    }
+  }
+}
