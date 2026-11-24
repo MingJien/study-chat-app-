@@ -24,3 +24,11 @@ Ghi PR/Issue, chức năng hoàn thành, lệnh kiểm tra và kết quả thậ
   - `flutter analyze --no-pub`: `No issues found!` (exit code 0).
   - `flutter test --no-pub`: `test/app/app_smoke_test.dart` pass (`1 test passed`, 0 failures).
 - **Chưa thực hiện:** Chuyển mã nguồn TV3-02/03/04 sang `lib/features/study_community/`, kiểm thử trên emulator/Firebase, `git push` lên remote.
+
+### 24/11/2026 — Chuyển TV3-02/03/04 từ preview vào module `study_community`
+- **Phạm vi:** Đưa mã nguồn tạo phòng (TV3-02), khám phá/tìm kiếm phòng (TV3-03), tham gia/rời phòng + callback mở thảo luận (TV3-04) và 21 test từ `classroom_chat_tv3_preview` sang `lib/features/study_community/{domain,data,presentation}/` và `test/study_community/`, giữ nguyên `community_placeholder.dart` cho `AppShell`.
+- **Kiểm chứng đã chạy:**
+  - `dart format --output=none --set-exit-if-changed lib/features/study_community test/study_community`: `Formatted 12 files (0 changed)` (exit code 0).
+  - `flutter analyze --no-pub`: `No issues found!` (exit code 0).
+  - `flutter test --no-pub`: `22 tests passed` (`1` test trong `test/app/app_smoke_test.dart` + `21` test trong `test/study_community/`, exit code 0).
+- **Giới hạn hiện tại (chưa tích hợp):** Dữ liệu vẫn dùng bản mẫu trong bộ nhớ (`RoomRepository`, `createPreviewRoomRepository()`); chưa nối Firebase Realtime Database, Firebase Auth, Security Rules hay module TV1/TV2; `AppShell` vẫn giữ placeholder tới PR tích hợp riêng. Chưa kiểm thử lại trực tiếp trên emulator trong đợt chuyển đổi này.
