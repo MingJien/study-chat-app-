@@ -2,9 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 
+import '../domain/study_community_contract.dart';
 import '../domain/study_room_models.dart';
 
-class RoomRepository extends ChangeNotifier {
+class RoomRepository extends ChangeNotifier implements StudyCommunityContract {
   RoomRepository({
     List<StudyRoom> initialRooms = const [],
     Map<String, List<RoomMember>> initialMembers = const {},
@@ -57,6 +58,7 @@ class RoomRepository extends ChangeNotifier {
 
   // UID comes from the active preview session. A Firebase implementation must
   // use Auth UID and enforce /roomMembers/{roomId}/{uid} in security rules.
+  @override
   Future<void> joinRoom(String roomId, {required String currentUserId}) async {
     final room = _requireRoom(roomId, currentUserId);
     final members = _membersByRoom.putIfAbsent(roomId, () => {});
@@ -68,6 +70,7 @@ class RoomRepository extends ChangeNotifier {
     notifyListeners();
   }
 
+  @override
   Future<void> leaveRoom(String roomId, {required String currentUserId}) async {
     final room = _requireRoom(roomId, currentUserId);
     if (room.ownerId == currentUserId ||
@@ -123,6 +126,7 @@ class RoomRepository extends ChangeNotifier {
     return List.unmodifiable(sorted);
   }
 
+  @override
   Stream<List<RoomMember>> watchRoomMembers(String roomId) {
     late final StreamController<List<RoomMember>> controller;
     void emit() {
@@ -152,6 +156,7 @@ class RoomRepository extends ChangeNotifier {
   RoomNotice? pinnedNoticeOf(String roomId) =>
       roomOf(roomId) == null ? null : _noticesByRoom[roomId];
 
+  @override
   Stream<RoomNotice?> watchPinnedNotice(String roomId) {
     late final StreamController<RoomNotice?> controller;
     void emit() {
@@ -175,6 +180,7 @@ class RoomRepository extends ChangeNotifier {
     return controller.stream;
   }
 
+  @override
   Future<void> updatePinnedNotice(
     String roomId, {
     required String currentUserId,
@@ -243,6 +249,41 @@ class RoomRepository extends ChangeNotifier {
     }
     notifyListeners();
   }
+
+  @override
+  Stream<List<StudyRoom>> watchRooms() {
+    late final StreamController<List<StudyRoom>> controller;
+    void emit() {
+      if (!controller.isClosed) {
+        controller.add(rooms);
+      }
+    }
+
+    controller = StreamController<List<StudyRoom>>(
+      onListen: () {
+        emit();
+        addListener(emit);
+      },
+      onCancel: () async {
+        removeListener(emit);
+        if (!controller.isClosed) {
+          await controller.close();
+        }
+      },
+    );
+    return controller.stream;
+  }
+
+  @override
+  Future<StudyRoom?> getRoom(String roomId) async => roomOf(roomId);
+
+  @override
+  Future<StudyRoom> createRoomAsync(CreateRoomInput input) async => createRoom(
+    roomName: input.roomName,
+    subject: input.subject,
+    description: input.description,
+    ownerId: input.ownerId,
+  );
 
   StudyRoom createRoom({
     required String roomName,

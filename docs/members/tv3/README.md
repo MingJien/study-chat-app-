@@ -8,6 +8,21 @@ Chủ trì: TV3 Study Community và App UI. Mỗi người chỉ cập nhật th
 - Thiết kế từng đợt: [specs/](specs/)
 - Kế hoạch triển khai: [plans/](plans/)
 
+## Tiến độ tổng hợp TV3
+
+| Hạng mục | Nội dung | Trạng thái trên `tv3` | Phần còn lại / Phụ thuộc |
+| --- | --- | --- | --- |
+| **TV3-01** | `HomeScreen` | `[x]` Xong module + test | Nối vào `AppShell` (TV3-08), nhận profile TV1 & hội thoại TV2 thật |
+| **TV3-02** | `CreateRoomScreen` | `[x]` Xong module + test | Nối Firebase Realtime Database (server timestamp, multi-location update) |
+| **TV3-03** | `RoomsScreen` | `[x]` Xong module + test | Nối stream danh sách realtime Firebase & Auth thật |
+| **TV3-04** | `RoomDetailScreen` (tham gia/rời) | `[x]` Xong module + test | Nối Firebase Rules & `ChatScreen` TV2 |
+| **TV3-05** | `RoomMembersScreen` | `[x]` Xong module + test | Nối `ProfileScreen` TV1, DM TV2 & khai báo `assets/avatars/` ở PR tích hợp |
+| **TV3-06** | Thông báo ghim (`roomNotices`) | `[x]` Xong module + test | Nối Firebase `/roomNotices/{roomId}` & gắn `PinnedNoticeBanner` vào `ChatScreen` TV2 |
+| **TV3-07** | Theme sáng/tối & `SettingsScreen` | `[x]` Xong module + test | Thêm `shared_preferences` ở PR TV3-08 để lưu bền vững qua lần mở lại app (T22) |
+| **TV3-08** | Điều hướng chung (`AppShell`, `AppRouter`, auth guard) | `[ ]` Chưa làm | Thực hiện trên nhánh tích hợp riêng `integration/tv3-app-shell` (sửa `lib/app/**`) |
+| **TV3-10** | Interface chuẩn & Firebase Rules fragment | `[x]` Xong `StudyCommunityContract` & `study_community.rules.json` | Chờ thống nhất `lib/core/contracts/`, viết Firebase gateway & test với Emulator |
+| **Nghiệm thu** | Tích hợp 3 module, T01–T24, APK | `[ ]` Chưa làm | Ghép TV1/TV2, chạy thử Android thật, T01–T24, quay minh chứng, APK & hỏi giảng viên REST API |
+
 ## Yêu cầu đang chờ
 
 - **Assets avatar dựng sẵn (chờ PR tích hợp dùng chung):** Sau khi TV1 và TV3 thống nhất bộ file ảnh PNG avatar dùng chung, đề nghị khai báo `lib/features/study_community/assets/avatars/` (hoặc thư mục assets chung đã thống nhất) trong `pubspec.yaml` ở PR tích hợp riêng. Hiện tại `MemberAvatar` dùng `avatarId` với fallback an toàn theo màu/ký tự đại diện nên không sửa `pubspec.yaml` trên nhánh `tv3`.
@@ -57,3 +72,11 @@ Ghi PR/Issue, chức năng hoàn thành, lệnh kiểm tra và kết quả thậ
   - `flutter analyze --no-pub`: `No issues found!` (exit code 0).
   - `flutter test --no-pub`: `48 tests passed` (`1` test trong `test/app/app_smoke_test.dart` + `47` tests trong `test/study_community/`, gồm 10 test mới ở `theme_settings_test.dart` và `home_screen_test.dart`, exit code 0).
 - **Giới hạn hiện tại:** `ThemeController` dùng `InMemoryThemeModeStore` trên nhánh `tv3` (chờ gắn `shared_preferences` ở PR TV3-08); `AppShell` / `AppRouter` (`lib/app/**`) chưa chỉnh trên `tv3` theo đúng quy ước phân quyền file; hội thoại gần đây và hồ sơ/đăng xuất nhận qua đầu nối TV1/TV2. Chưa kiểm thử trực tiếp trên emulator trong đợt này.
+
+### 24/11/2026 — TV3-10 Contract & Firebase Rules fragment
+- **Phạm vi:** Tạo interface `StudyCommunityContract` và `CreateRoomInput` trong `domain/study_community_contract.dart`, triển khai `watchRooms()`, `getRoom()`, `createRoomAsync()` trên `RoomRepository`, và bổ sung Security Rules fragment cho 3 node `/rooms`, `/roomMembers`, `/roomNotices` tại `lib/features/study_community/integration/study_community.rules.json`.
+- **Kiểm chứng đã chạy:**
+  - `dart format --output=none --set-exit-if-changed lib/features/study_community test/study_community`: `Formatted 25 files (0 changed)` (exit code 0).
+  - `flutter analyze --no-pub`: `No issues found!` (exit code 0).
+  - `flutter test --no-pub`: `50 tests passed` (`1` test trong `test/app/app_smoke_test.dart` + `49` tests trong `test/study_community/`, gồm 2 test mới ở `contract_test.dart`, exit code 0).
+- **Giới hạn hiện tại:** `RoomRepository` vẫn lưu dữ liệu trong bộ nhớ; `study_community.rules.json` mới kiểm tra cú pháp JSON, chưa test chạy thực tế trên Firebase Emulator hay triển khai Firebase project chung. Chưa kiểm thử trên emulator Android thật (`flutter devices` hiện chỉ có Windows/Chrome/Edge).
