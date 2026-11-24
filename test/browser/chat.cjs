@@ -30,9 +30,18 @@ async function database(u, method, key, body) {
   return data;
 }
 async function fill(page, name, value) {
-  await page.getByRole('textbox',{name}).click();
-  await page.keyboard.press('Control+A');
-  await page.keyboard.insertText(value);
+  await page.bringToFront();
+  const field=page.getByRole('textbox',{name,exact:true});
+  for(let attempt=0;attempt<3;attempt++) {
+    await field.click();
+    // Flutter mounts its editing element on the frame after semantic focus.
+    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+    await page.keyboard.press('Control+A');
+    await page.keyboard.insertText(value);
+    await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+    if(await field.inputValue()===value) return;
+  }
+  throw Error('Flutter text field did not accept input: '+name);
 }
 async function send(page, message) {
   await fill(page,'Nhập tin nhắn…',message);
@@ -139,7 +148,7 @@ async function run() {
     await caption(p,'Sau khi kết nối lại, tin gửi trong lúc Lan Anh ngoại tuyến tự xuất hiện.');
     await label(p,'Back').click();await p.getByRole('tab',{name:'Phòng học'}).click();
     await label(p,'Tạo phòng').click();
-    await p.getByRole('textbox').last().click();await p.keyboard.insertText(roomName);await label(p,'Lưu').click();
+    await fill(p,'',roomName);await label(p,'Lưu').click();
     await p.getByRole('button',{name:new RegExp(roomName)}).first().waitFor();
     await caption(p,'Phòng học mới có mã riêng. Người tạo là chủ phòng và là thành viên đầu tiên.');
     const row=p.getByRole('button',{name:new RegExp(roomName)}).first();
