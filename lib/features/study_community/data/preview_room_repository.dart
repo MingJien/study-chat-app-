@@ -63,5 +63,13 @@ RoomRepository createPreviewRoomRepository() {
       ],
       'room_preview_web': [RoomMember(uid: minhUid, role: RoomRole.owner)],
     },
+    initialNotices: {
+      'room_preview_mobile': RoomNotice(
+        roomId: 'room_preview_mobile',
+        content: 'Hạn nộp bài thực hành Flutter: Thứ Sáu 17:00.',
+        updatedBy: previewUid,
+        updatedAt: DateTime.utc(2026, 11, 22, 9),
+      ),
+    },
   );
 }

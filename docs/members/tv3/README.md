@@ -40,3 +40,11 @@ Ghi PR/Issue, chức năng hoàn thành, lệnh kiểm tra và kết quả thậ
   - `flutter analyze --no-pub`: `No issues found!` (exit code 0).
   - `flutter test --no-pub`: `30 tests passed` (`1` test trong `test/app/app_smoke_test.dart` + `29` tests trong `test/study_community/`, gồm 8 test mới ở `room_members_test.dart`, exit code 0).
 - **Giới hạn hiện tại:** Dữ liệu vẫn dùng bản mẫu trong bộ nhớ (`RoomRepository`, `createPreviewRoomRepository()`); mở hồ sơ (TV1) và nhắn tin riêng (TV2) kết nối qua callback (`OpenUserProfile`, `OpenDirectMessage`) và hiển thị thông báo preview khi chưa ghép module thật. Chưa kiểm thử trực tiếp trên emulator trong đợt này.
+
+### 24/11/2026 — TV3-06 Thông báo ghim
+- **Phạm vi:** Thêm `RoomNotice` (tối đa 300 ký tự) và `RoomNoticeException`, hỗ trợ `initialNotices`, `pinnedNoticeOf`, `watchPinnedNotice`, `updatePinnedNotice` và `clearPinnedNotice` (chỉ `owner` được sửa/bỏ ghim) trong `RoomRepository`, dựng `PinnedNoticeBanner` dùng chung cho `RoomDetailScreen` và TV2 `ChatScreen`, cùng nút **Ghim thông báo** / **Sửa ghim** / **Bỏ ghim** cho chủ phòng.
+- **Kiểm chứng đã chạy:**
+  - `dart format --output=none --set-exit-if-changed lib/features/study_community test/study_community`: `Formatted 17 files (0 changed)` (exit code 0).
+  - `flutter analyze --no-pub`: `No issues found!` (exit code 0).
+  - `flutter test --no-pub`: `38 tests passed` (`1` test trong `test/app/app_smoke_test.dart` + `37` tests trong `test/study_community/`, gồm 8 test mới ở `pinned_notice_test.dart`, exit code 0).
+- **Giới hạn hiện tại:** Dữ liệu ghim vẫn nằm trong bộ nhớ (`RoomRepository`, `createPreviewRoomRepository()`), chưa nối Firebase Realtime Database `/roomNotices/{roomId}` / Security Rules và chờ gắn `PinnedNoticeBanner` hoặc `watchPinnedNotice` vào `ChatScreen` TV2 khi tích hợp. Chưa kiểm thử trực tiếp trên emulator trong đợt này.

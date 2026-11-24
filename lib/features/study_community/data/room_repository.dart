@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 
 import '../domain/study_room_models.dart';
 
@@ -8,6 +8,7 @@ class RoomRepository extends ChangeNotifier {
   RoomRepository({
     List<StudyRoom> initialRooms = const [],
     Map<String, List<RoomMember>> initialMembers = const {},
+    Map<String, RoomNotice> initialNotices = const {},
     Map<String, UserProfile> profiles = const {},
     this.onLoad,
   }) : _rooms = List.of(initialRooms),
@@ -17,10 +18,12 @@ class RoomRepository extends ChangeNotifier {
         for (final member in entry.value) member.uid: member,
       };
     }
+    _noticesByRoom.addAll(initialNotices);
   }
 
   final List<StudyRoom> _rooms;
   final _membersByRoom = <String, Map<String, RoomMember>>{};
+  final _noticesByRoom = <String, RoomNotice>{};
   final Map<String, UserProfile> _profiles;
   final Future<void> Function()? onLoad;
   int _nextRoomNumber = 1;
@@ -142,6 +145,79 @@ class RoomRepository extends ChangeNotifier {
     );
     return controller.stream;
   }
+
+  bool _isOwner(StudyRoom room, String uid) =>
+      room.ownerId == uid || memberOf(room.roomId, uid)?.role == RoomRole.owner;
+
+  RoomNotice? pinnedNoticeOf(String roomId) =>
+      roomOf(roomId) == null ? null : _noticesByRoom[roomId];
+
+  Stream<RoomNotice?> watchPinnedNotice(String roomId) {
+    late final StreamController<RoomNotice?> controller;
+    void emit() {
+      if (!controller.isClosed) {
+        controller.add(pinnedNoticeOf(roomId));
+      }
+    }
+
+    controller = StreamController<RoomNotice?>(
+      onListen: () {
+        emit();
+        addListener(emit);
+      },
+      onCancel: () async {
+        removeListener(emit);
+        if (!controller.isClosed) {
+          await controller.close();
+        }
+      },
+    );
+    return controller.stream;
+  }
+
+  Future<void> updatePinnedNotice(
+    String roomId, {
+    required String currentUserId,
+    required String content,
+  }) async {
+    final room = roomOf(roomId);
+    if (room == null) {
+      throw const RoomNoticeException('Phòng không còn tồn tại.');
+    }
+    if (currentUserId.trim().isEmpty) {
+      throw const RoomNoticeException('Không xác định được tài khoản.');
+    }
+    if (!_isOwner(room, currentUserId)) {
+      throw const RoomNoticeException(
+        'Chỉ chủ phòng mới có thể quản lý thông báo ghim.',
+      );
+    }
+
+    final trimmed = content.trim();
+    if (trimmed.isEmpty) {
+      if (_noticesByRoom.remove(roomId) != null) {
+        notifyListeners();
+      }
+      return;
+    }
+
+    if (trimmed.characters.length > RoomNotice.maxContentLength) {
+      throw const RoomNoticeException('Thông báo ghim tối đa 300 ký tự.');
+    }
+
+    _noticesByRoom[roomId] = RoomNotice(
+      roomId: roomId,
+      content: trimmed,
+      updatedBy: currentUserId,
+      updatedAt: DateTime.now().toUtc(),
+    );
+    notifyListeners();
+  }
+
+  Future<void> clearPinnedNotice(
+    String roomId, {
+    required String currentUserId,
+  }) => updatePinnedNotice(roomId, currentUserId: currentUserId, content: '');
 
   List<StudyRoom> searchRooms(String query) {
     final normalizedQuery = query.trim().toLowerCase();

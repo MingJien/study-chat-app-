@@ -58,3 +58,24 @@ typedef OpenUserProfile = Future<void> Function({required String uid});
 
 /// TV2 supplies direct chat navigation via openDirectConversation(peerUid).
 typedef OpenDirectMessage = Future<void> Function({required String peerUid});
+
+class RoomNoticeException implements Exception {
+  const RoomNoticeException(this.message);
+  final String message;
+}
+
+class RoomNotice {
+  static const int maxContentLength = 300;
+
+  const RoomNotice({
+    required this.roomId,
+    required this.content,
+    required this.updatedBy,
+    required this.updatedAt,
+  });
+
+  final String roomId;
+  final String content;
+  final String updatedBy;
+  final DateTime updatedAt;
+}

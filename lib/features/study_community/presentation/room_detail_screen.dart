@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/room_repository.dart';
 import '../domain/study_room_models.dart';
+import 'pinned_notice_banner.dart';
 import 'room_members_screen.dart';
 
 class RoomDetailScreen extends StatefulWidget {
@@ -48,10 +49,67 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
       await action();
     } on RoomMembershipException catch (error) {
       _message(error.message);
+    } on RoomNoticeException catch (error) {
+      _message(error.message);
     } catch (_) {
       _message('Không thể thực hiện thao tác. Vui lòng thử lại.');
     } finally {
       if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _editPinnedNotice(RoomNotice? existing) async {
+    if (_locked) return;
+    setState(() => _confirming = true);
+    try {
+      final result = await showDialog<String>(
+        context: context,
+        builder: (context) =>
+            _PinnedNoticeDialog(initialContent: existing?.content ?? ''),
+      );
+      if (result == null || !mounted) return;
+      await _perform(
+        () => widget.repository.updatePinnedNotice(
+          widget.room.roomId,
+          currentUserId: widget.currentUserId,
+          content: result,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _confirming = false);
+    }
+  }
+
+  Future<void> _clearPinnedNotice() async {
+    if (_locked) return;
+    setState(() => _confirming = true);
+    try {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Bỏ ghim thông báo?'),
+          content: const Text('Thông báo ghim hiện tại sẽ bị gỡ khỏi phòng.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Hủy'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Xác nhận bỏ ghim'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !mounted) return;
+      await _perform(
+        () => widget.repository.clearPinnedNotice(
+          widget.room.roomId,
+          currentUserId: widget.currentUserId,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _confirming = false);
     }
   }
 
@@ -124,10 +182,50 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
             final isOwner =
                 room.ownerId == widget.currentUserId ||
                 member?.role == RoomRole.owner;
+            final canViewNotice = member != null || isOwner;
+            final pinnedNotice = repository.pinnedNoticeOf(room.roomId);
             return ListView(
               padding: const EdgeInsets.all(16),
               children: [
                 Text(room.roomName, style: theme.textTheme.headlineMedium),
+                if (canViewNotice && pinnedNotice != null) ...[
+                  const SizedBox(height: 16),
+                  PinnedNoticeBanner(
+                    roomId: room.roomId,
+                    repository: repository,
+                  ),
+                ],
+                if (isOwner) ...[
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      if (pinnedNotice == null)
+                        OutlinedButton.icon(
+                          onPressed: _locked
+                              ? null
+                              : () => _editPinnedNotice(null),
+                          icon: const Icon(Icons.push_pin_outlined),
+                          label: const Text('Ghim thông báo'),
+                        )
+                      else ...[
+                        OutlinedButton.icon(
+                          onPressed: _locked
+                              ? null
+                              : () => _editPinnedNotice(pinnedNotice),
+                          icon: const Icon(Icons.edit_outlined),
+                          label: const Text('Sửa ghim'),
+                        ),
+                        TextButton.icon(
+                          onPressed: _locked ? null : _clearPinnedNotice,
+                          icon: const Icon(Icons.push_pin_outlined),
+                          label: const Text('Bỏ ghim'),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
                 if (room.subject.isNotEmpty) ...[
                   const SizedBox(height: 16),
                   Text('Môn học', style: theme.textTheme.titleSmall),
@@ -204,6 +302,76 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
           },
         ),
       ),
+    );
+  }
+}
+
+class _PinnedNoticeDialog extends StatefulWidget {
+  const _PinnedNoticeDialog({required this.initialContent});
+
+  final String initialContent;
+
+  @override
+  State<_PinnedNoticeDialog> createState() => _PinnedNoticeDialogState();
+}
+
+class _PinnedNoticeDialogState extends State<_PinnedNoticeDialog> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialContent);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isEditing = widget.initialContent.isNotEmpty;
+    return AlertDialog(
+      title: Text(isEditing ? 'Sửa thông báo ghim' : 'Ghim thông báo'),
+      content: Form(
+        key: _formKey,
+        autovalidateMode: AutovalidateMode.onUserInteraction,
+        child: TextFormField(
+          controller: _controller,
+          autofocus: true,
+          minLines: 2,
+          maxLines: 5,
+          decoration: const InputDecoration(
+            labelText: 'Nội dung thông báo',
+            helperText: 'Tối đa 300 ký tự',
+            alignLabelWithHint: true,
+          ),
+          validator: (value) {
+            final trimmed = (value ?? '').trim();
+            if (trimmed.isEmpty) return 'Nhập nội dung thông báo.';
+            if (trimmed.characters.length > RoomNotice.maxContentLength) {
+              return 'Thông báo ghim tối đa 300 ký tự.';
+            }
+            return null;
+          },
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Hủy'),
+        ),
+        FilledButton(
+          onPressed: () {
+            if (!_formKey.currentState!.validate()) return;
+            Navigator.pop(context, _controller.text);
+          },
+          child: const Text('Lưu'),
+        ),
+      ],
     );
   }
 }
