@@ -1,0 +1,316 @@
+import 'dart:async';
+
+import 'package:flutter/widgets.dart';
+
+import '../domain/study_community_contract.dart';
+import '../domain/study_room_models.dart';
+
+class RoomRepository extends ChangeNotifier implements StudyCommunityContract {
+  RoomRepository({
+    List<StudyRoom> initialRooms = const [],
+    Map<String, List<RoomMember>> initialMembers = const {},
+    Map<String, RoomNotice> initialNotices = const {},
+    Map<String, UserProfile> profiles = const {},
+    this.onLoad,
+  }) : _rooms = List.of(initialRooms),
+       _profiles = Map.of(profiles) {
+    for (final entry in initialMembers.entries) {
+      _membersByRoom[entry.key] = {
+        for (final member in entry.value) member.uid: member,
+      };
+    }
+    _noticesByRoom.addAll(initialNotices);
+  }
+
+  final List<StudyRoom> _rooms;
+  final _membersByRoom = <String, Map<String, RoomMember>>{};
+  final _noticesByRoom = <String, RoomNotice>{};
+  final Map<String, UserProfile> _profiles;
+  final Future<void> Function()? onLoad;
+  int _nextRoomNumber = 1;
+  RoomsLoadStatus _loadStatus = RoomsLoadStatus.idle;
+
+  List<StudyRoom> get rooms => List.unmodifiable(_rooms);
+  RoomsLoadStatus get loadStatus => _loadStatus;
+
+  RoomMember? memberOf(String roomId, String uid) =>
+      _membersByRoom[roomId]?[uid];
+
+  StudyRoom? roomOf(String roomId) {
+    for (final room in _rooms) {
+      if (room.roomId == roomId) return room;
+    }
+    return null;
+  }
+
+  int memberCountOf(String roomId) => _membersByRoom[roomId]?.length ?? 0;
+
+  StudyRoom _requireRoom(String roomId, String uid) {
+    final room = roomOf(roomId);
+    if (room == null) {
+      throw const RoomMembershipException('Phòng không còn tồn tại.');
+    }
+    if (uid.trim().isEmpty) {
+      throw const RoomMembershipException('Không xác định được tài khoản.');
+    }
+    return room;
+  }
+
+  // UID comes from the active preview session. A Firebase implementation must
+  // use Auth UID and enforce /roomMembers/{roomId}/{uid} in security rules.
+  @override
+  Future<void> joinRoom(String roomId, {required String currentUserId}) async {
+    final room = _requireRoom(roomId, currentUserId);
+    final members = _membersByRoom.putIfAbsent(roomId, () => {});
+    if (members.containsKey(currentUserId)) return;
+    members[currentUserId] = RoomMember(
+      uid: currentUserId,
+      role: room.ownerId == currentUserId ? RoomRole.owner : RoomRole.member,
+    );
+    notifyListeners();
+  }
+
+  @override
+  Future<void> leaveRoom(String roomId, {required String currentUserId}) async {
+    final room = _requireRoom(roomId, currentUserId);
+    if (room.ownerId == currentUserId ||
+        memberOf(roomId, currentUserId)?.role == RoomRole.owner) {
+      throw const RoomMembershipException('Chủ phòng không thể rời phòng.');
+    }
+    if (_membersByRoom[roomId]?.remove(currentUserId) != null) {
+      notifyListeners();
+    }
+  }
+
+  void requireMembership(String roomId, {required String currentUserId}) {
+    _requireRoom(roomId, currentUserId);
+    if (memberOf(roomId, currentUserId) == null) {
+      throw const RoomMembershipException(
+        'Bạn cần tham gia phòng trước khi vào thảo luận.',
+      );
+    }
+  }
+
+  UserProfile? profileOf(String uid) => _profiles[uid];
+
+  String displayNameOf(String uid) =>
+      profileOf(uid)?.displayName ?? 'Người dùng ẩn danh';
+
+  String creatorNameOf(StudyRoom room) => displayNameOf(room.ownerId);
+
+  String avatarIdOf(String uid) {
+    final avatarId = profileOf(uid)?.avatarId.trim() ?? '';
+    return avatarId.isEmpty ? UserProfile.defaultAvatarId : avatarId;
+  }
+
+  List<RoomMember> membersOf(String roomId) {
+    final room = roomOf(roomId);
+    final members = _membersByRoom[roomId];
+    if (room == null || members == null || members.isEmpty) {
+      return const [];
+    }
+
+    final sorted = members.values.toList()
+      ..sort((a, b) {
+        final aIsOwner = a.role == RoomRole.owner || a.uid == room.ownerId;
+        final bIsOwner = b.role == RoomRole.owner || b.uid == room.ownerId;
+        if (aIsOwner != bIsOwner) return aIsOwner ? -1 : 1;
+
+        final nameCompare = displayNameOf(a.uid)
+            .toLowerCase()
+            .compareTo(displayNameOf(b.uid).toLowerCase());
+        if (nameCompare != 0) return nameCompare;
+
+        return a.uid.compareTo(b.uid);
+      });
+    return List.unmodifiable(sorted);
+  }
+
+  @override
+  Stream<List<RoomMember>> watchRoomMembers(String roomId) {
+    late final StreamController<List<RoomMember>> controller;
+    void emit() {
+      if (!controller.isClosed) {
+        controller.add(membersOf(roomId));
+      }
+    }
+
+    controller = StreamController<List<RoomMember>>(
+      onListen: () {
+        emit();
+        addListener(emit);
+      },
+      onCancel: () async {
+        removeListener(emit);
+        if (!controller.isClosed) {
+          await controller.close();
+        }
+      },
+    );
+    return controller.stream;
+  }
+
+  bool _isOwner(StudyRoom room, String uid) =>
+      room.ownerId == uid || memberOf(room.roomId, uid)?.role == RoomRole.owner;
+
+  RoomNotice? pinnedNoticeOf(String roomId) =>
+      roomOf(roomId) == null ? null : _noticesByRoom[roomId];
+
+  @override
+  Stream<RoomNotice?> watchPinnedNotice(String roomId) {
+    late final StreamController<RoomNotice?> controller;
+    void emit() {
+      if (!controller.isClosed) {
+        controller.add(pinnedNoticeOf(roomId));
+      }
+    }
+
+    controller = StreamController<RoomNotice?>(
+      onListen: () {
+        emit();
+        addListener(emit);
+      },
+      onCancel: () async {
+        removeListener(emit);
+        if (!controller.isClosed) {
+          await controller.close();
+        }
+      },
+    );
+    return controller.stream;
+  }
+
+  @override
+  Future<void> updatePinnedNotice(
+    String roomId, {
+    required String currentUserId,
+    required String content,
+  }) async {
+    final room = roomOf(roomId);
+    if (room == null) {
+      throw const RoomNoticeException('Phòng không còn tồn tại.');
+    }
+    if (currentUserId.trim().isEmpty) {
+      throw const RoomNoticeException('Không xác định được tài khoản.');
+    }
+    if (!_isOwner(room, currentUserId)) {
+      throw const RoomNoticeException(
+        'Chỉ chủ phòng mới có thể quản lý thông báo ghim.',
+      );
+    }
+
+    final trimmed = content.trim();
+    if (trimmed.isEmpty) {
+      if (_noticesByRoom.remove(roomId) != null) {
+        notifyListeners();
+      }
+      return;
+    }
+
+    if (trimmed.characters.length > RoomNotice.maxContentLength) {
+      throw const RoomNoticeException('Thông báo ghim tối đa 300 ký tự.');
+    }
+
+    _noticesByRoom[roomId] = RoomNotice(
+      roomId: roomId,
+      content: trimmed,
+      updatedBy: currentUserId,
+      updatedAt: DateTime.now().toUtc(),
+    );
+    notifyListeners();
+  }
+
+  Future<void> clearPinnedNotice(
+    String roomId, {
+    required String currentUserId,
+  }) => updatePinnedNotice(roomId, currentUserId: currentUserId, content: '');
+
+  List<StudyRoom> searchRooms(String query) {
+    final normalizedQuery = query.trim().toLowerCase();
+    if (normalizedQuery.isEmpty) return rooms;
+
+    return List.unmodifiable(
+      _rooms.where((room) {
+        return room.roomName.toLowerCase().contains(normalizedQuery) ||
+            room.subject.toLowerCase().contains(normalizedQuery);
+      }),
+    );
+  }
+
+  Future<void> loadRooms() async {
+    _loadStatus = RoomsLoadStatus.loading;
+    notifyListeners();
+
+    try {
+      await onLoad?.call();
+      _loadStatus = RoomsLoadStatus.loaded;
+    } catch (_) {
+      _loadStatus = RoomsLoadStatus.error;
+    }
+    notifyListeners();
+  }
+
+  @override
+  Stream<List<StudyRoom>> watchRooms() {
+    late final StreamController<List<StudyRoom>> controller;
+    void emit() {
+      if (!controller.isClosed) {
+        controller.add(rooms);
+      }
+    }
+
+    controller = StreamController<List<StudyRoom>>(
+      onListen: () {
+        emit();
+        addListener(emit);
+      },
+      onCancel: () async {
+        removeListener(emit);
+        if (!controller.isClosed) {
+          await controller.close();
+        }
+      },
+    );
+    return controller.stream;
+  }
+
+  @override
+  Future<StudyRoom?> getRoom(String roomId) async => roomOf(roomId);
+
+  @override
+  Future<StudyRoom> createRoomAsync(CreateRoomInput input) async => createRoom(
+    roomName: input.roomName,
+    subject: input.subject,
+    description: input.description,
+    ownerId: input.ownerId,
+  );
+
+  StudyRoom createRoom({
+    required String roomName,
+    required String subject,
+    required String description,
+    required String ownerId,
+  }) {
+    late String roomId;
+    do {
+      roomId = 'room_${_nextRoomNumber++}';
+    } while (_rooms.any((room) => room.roomId == roomId));
+
+    final room = StudyRoom(
+      roomId: roomId,
+      roomName: roomName.trim(),
+      subject: subject.trim(),
+      description: description.trim(),
+      ownerId: ownerId,
+      createdAt: DateTime.now().toUtc(),
+    );
+
+    _membersByRoom[room.roomId] = {
+      ownerId: RoomMember(uid: ownerId, role: RoomRole.owner),
+    };
+    _rooms.insert(0, room);
+    _loadStatus = RoomsLoadStatus.loaded;
+    notifyListeners();
+    return room;
+  }
+}
