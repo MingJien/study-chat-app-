@@ -139,6 +139,11 @@
       "$cid": {
         ".read": "auth != null && (((root.child('directChats').child($cid).child('first').val() == auth.uid || root.child('directChats').child($cid).child('second').val() == auth.uid)) || ($cid.beginsWith('room_') && root.child('roomMembers').child($cid).child(auth.uid).exists()))",
         "$mid": {
+          "followers": {
+            "$uid": {
+              ".write": "auth != null && auth.uid == $uid && ((!newData.exists() && !newData.parent().parent().parent().parent().parent().child('questionFollows').child($uid).child($cid).child($mid).child('active').exists()) || (newData.val() == true && newData.parent().parent().parent().parent().parent().child('questionFollows').child($uid).child($cid).child($mid).child('active').val() == true && (root.child('roomMembers').child($cid).child(auth.uid).exists() || root.child('directChats').child($cid).child('first').val() == auth.uid || root.child('directChats').child($cid).child('second').val() == auth.uid) && root.child('messages').child($cid).child($mid).child('kind').val() == 'question'))"
+            }
+          },
           "reactions": {
             "$uid": {
               ".write": "auth != null && (((root.child('directChats').child($cid).child('first').val() == auth.uid || root.child('directChats').child($cid).child('second').val() == auth.uid)) || ($cid.beginsWith('room_') && root.child('roomMembers').child($cid).child(auth.uid).exists())) && root.child('messages').child($cid).child($mid).exists() && !root.child('messages').child($cid).child($mid).child('recalled').exists() && auth.uid == $uid",
@@ -152,6 +157,21 @@
           "answer": {
             ".write": "auth != null && (((root.child('directChats').child($cid).child('first').val() == auth.uid || root.child('directChats').child($cid).child('second').val() == auth.uid)) || ($cid.beginsWith('room_') && root.child('roomMembers').child($cid).child(auth.uid).exists())) && root.child('messages').child($cid).child($mid).exists() && !root.child('messages').child($cid).child($mid).child('recalled').exists() && root.child('messages').child($cid).child($mid).child('kind').val() == 'question' && root.child('messages').child($cid).child($mid).child('senderId').val() == auth.uid",
             ".validate": "newData.isString() && root.child('messages').child($cid).child(newData.val()).child('replyTo').val() == $mid && !root.child('messages').child($cid).child(newData.val()).child('recalled').exists()"
+          }
+        }
+      }
+    },
+    "questionFollows": {
+      "$uid": {
+        ".read": "auth != null && auth.uid == $uid",
+        "$cid": {
+          "$mid": {
+            ".write": "auth != null && auth.uid == $uid && ((!newData.exists() && !newData.parent().parent().parent().parent().child('interactions').child($cid).child($mid).child('followers').child($uid).exists()) || (newData.exists() && newData.parent().parent().parent().parent().child('interactions').child($cid).child($mid).child('followers').child($uid).val() == true && (root.child('roomMembers').child($cid).child(auth.uid).exists() || root.child('directChats').child($cid).child('first').val() == auth.uid || root.child('directChats').child($cid).child('second').val() == auth.uid) && root.child('messages').child($cid).child($mid).child('kind').val() == 'question'))",
+            ".validate": "newData.child('active').val() == true",
+            "active": { ".validate": "newData.val() == true" },
+            "seen": { ".validate": "newData.isString() && (newData.val() == data.val() || newData.val() == root.child('interactions').child($cid).child($mid).child('answer').val())" },
+            "reviewAt": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 8640000000000000" },
+            "$other": { ".validate": false }
           }
         }
       }

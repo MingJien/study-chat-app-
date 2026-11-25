@@ -90,4 +90,5 @@ async function run(){
     console.log('PASS: quick accounts, question, reply, accepted answer, revision, recall and file round trip across browsers');
   }finally{await browser.close();}
 }
-run().catch(err=>{console.error(err);process.exitCode=1;});
+module.exports={click,fill,messageVisible,actionOnLast};
+if(require.main===module) run().catch(err=>{console.error(err);process.exitCode=1;});

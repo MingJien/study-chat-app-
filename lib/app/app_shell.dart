@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../features/realtime_chat/domain/chat.dart';
 import '../features/realtime_chat/presentation/chat_widgets.dart' show ChatArgs;
+import '../features/realtime_chat/presentation/followed_questions.dart';
 import 'contacts.dart';
 
 import '../features/realtime_chat/data/chat_repository.dart';
@@ -74,18 +75,40 @@ class _AppShellState extends State<AppShell> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => StreamBuilder(
+    stream: widget.repo.followedQuestions,
+    builder: (context, s) => buildShell(context, s.data ?? const []),
+  );
+  Widget buildShell(BuildContext context, List<FollowedQuestion> followed) {
     final repo = widget.repo;
+    final unread = followed.where((q) => q.unread);
+    final notice =
+        unread.firstOrNull ?? followed.where((q) => q.due).firstOrNull;
     return Scaffold(
       appBar: AppBar(
         title: const Row(
           children: [
             Icon(Icons.forum_rounded),
             SizedBox(width: 10),
-            Text('Study Chat', style: TextStyle(fontWeight: FontWeight.w700)),
+            Flexible(
+              child: Text(
+                'Study Chat',
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+            ),
           ],
         ),
         actions: [
+          IconButton(
+            tooltip: 'Câu mình đang theo dõi',
+            icon: Badge(
+              isLabelVisible: unread.isNotEmpty,
+              label: Text('${unread.length}'),
+              child: const Icon(Icons.bookmarks_outlined),
+            ),
+            onPressed: () => FollowedQuestionsPage.open(context, repo),
+          ),
           IconButton(
             tooltip: 'Đổi sáng / tối',
             onPressed: widget.changeTheme,
@@ -120,7 +143,32 @@ class _AppShellState extends State<AppShell> {
             constraints: const BoxConstraints(maxWidth: 880),
             child: Column(
               children: [
-                if (notification case final message?)
+                if (notice != null)
+                  ListTile(
+                    dense: true,
+                    leading: Icon(
+                      notice.unread
+                          ? Icons.lightbulb_outline
+                          : Icons.event_available,
+                    ),
+                    title: Text(
+                      notice.unread
+                          ? 'Câu bạn theo dõi đã có lời giải'
+                          : 'Đến ngày ôn câu đã theo dõi',
+                    ),
+                    subtitle: Text(
+                      notice.question.content,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    onTap: () => SolutionPage.open(
+                      context,
+                      repo,
+                      notice,
+                      practice: !notice.unread,
+                    ),
+                  )
+                else if (notification case final message?)
                   ListTile(
                     dense: true,
                     leading: const Icon(Icons.notifications_active_outlined),

@@ -350,6 +350,10 @@ extension _ChatTools on _ChatScreenState {
     Map<String, dynamic> meta,
     Map<String, dynamic> prefs,
   ) async {
+    if (key == 'following') {
+      FollowedQuestionsPage.open(context, repo, cid: chat.id);
+      return;
+    }
     if (key == 'profile') {
       await Navigator.pushNamed(context, '/profile', arguments: chat.peerUid);
       return;

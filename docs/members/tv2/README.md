@@ -14,6 +14,12 @@ Nhánh giao bài và cập nhật của TV2 là `tv2`. Mở thư mục gốc tro
 4. Dùng menu của một hàng trong **Tin nhắn** để ghim, lưu trữ hoặc xóa lịch sử cá nhân. Sau khi xóa lịch sử, tin mới làm hội thoại xuất hiện lại. Các biệt danh chỉ hiển thị cho tài khoản đã đặt. Tìm tin nhắn trả tối đa 100 kết quả, khi ngoại tuyến chỉ tra trong 30 tin gần nhất đã đồng bộ trên thiết bị.
 5. **Trang chủ** có bài đăng và story 24 giờ cho người dùng đã đăng nhập. Chọn ghi chú, câu hỏi hoặc danh sách ôn tập, thêm định dạng chữ và ảnh tối đa 128 KiB. Chủ bài có thể xóa bài. **Hồ sơ của tôi** cho phép sửa tên, lớp và giới thiệu.
 
+### Mình cũng đang bí
+
+**Theo dõi một câu hỏi trong chat.** Mở phòng bằng ba tài khoản demo ở ba hồ sơ trình duyệt. Minh An đặt câu hỏi, Lan Chi bấm **Mình cũng đang bí**, Hải Bình trả lời bằng thao tác **Trả lời**. Khi Minh An chốt câu trả lời, Lan Chi thấy thông báo trong ứng dụng và có thể mở thẳng cặp câu hỏi – lời giải. Biểu tượng dấu trang trên thanh trên cùng mở **Câu mình đang theo dõi** của mọi hội thoại. Trong công cụ của một cuộc chat, cùng mục này chỉ hiện câu của cuộc chat đó.
+
+Lan Chi có thể chọn **Hẹn ngày ôn** và đóng ứng dụng. Lịch được lưu riêng theo tài khoản. Khi mở lại ứng dụng vào ngày hẹn, chạm lời nhắc để tự trả lời trước khi lật thẻ, rồi chọn **Đã ôn xong**. Câu hoặc lời giải đã thu hồi, tin đã xóa phía mình và nội dung phòng đã rời được loại khỏi phần hiển thị tương ứng.
+
 ### Cấu hình Android khi phát hành
 
 Bản CI chạy với Firebase Emulator. Đối với bản phát hành, nhóm cần Firebase project riêng, bật xác thực, triển khai Rules đã kiểm thử và truyền cấu hình `FIREBASE_*` cùng `FIREBASE_EMULATOR=false` vào build. Gradle đọc khóa ký riêng từ `android/key.properties` qua các trường `storeFile`, `storePassword`, `keyAlias`, `keyPassword`. File này và keystore nằm ngoài Git. Khi chưa cấp khóa riêng, APK của CI dùng khóa demo.

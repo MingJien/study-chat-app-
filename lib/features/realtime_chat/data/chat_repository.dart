@@ -8,6 +8,8 @@ import '../domain/chat.dart';
 import 'chat_cache.dart';
 import 'chat_rest.dart';
 
+part 'question_follows.dart';
+
 class ChatRepository implements ChatApi {
   ChatRepository(this.uid, this.auth, this.db, this.cache, this.rest) {
     connection = db
@@ -28,6 +30,9 @@ class ChatRepository implements ChatApi {
   final FirebaseDatabase db;
   final ChatCache cache;
   final ChatRest rest;
+  late final followedQuestions = _watchFollowedQuestions().shareReplay(
+    maxSize: 1,
+  );
   late final Stream<bool> connection;
   late final StreamSubscription<bool> _presence;
   final _errors = StreamController<Object>.broadcast();

@@ -109,6 +109,34 @@ test('TV2 · Firebase Auth, RTDB và quyền theo hội thoại',async t=>{
     await ok(request(a,'PATCH','',{[path+'file']:tombstone,[file]:null}));
     await denied(request(b,'GET',file));
   });
+  await t.test('Question follows · count, private schedule, permissions and leaving a room',async()=>{
+    const path='messages/'+room+'/';
+    await ok(request(b,'PUT','roomMembers/'+room+'/'+b.localId,{uid:b.localId,role:'member'}));
+    await ok(request(a,'PUT',path+'help',{...msg(a,'Question'),kind:'question'}));
+    const publicFlag=(u,mid='help')=>'interactions/'+room+'/'+mid+'/followers/'+u.localId;
+    const privateRow=(u,mid='help')=>'questionFollows/'+u.localId+'/'+room+'/'+mid;
+    const follow=(u,mid='help')=>({[publicFlag(u,mid)]:true,[privateRow(u,mid)+'/active']:true});
+    await denied(request(c,'PATCH','',follow(c)));
+    await denied(request(b,'PATCH','',follow(b,'m1')));
+    await denied(request(b,'PATCH','',follow(c)));
+    await denied(request(b,'PUT',publicFlag(b),true));
+    await denied(request(b,'PUT',privateRow(b)+'/active',true));
+    await ok(request(b,'PATCH','',follow(b)));
+    await ok(request(b,'PATCH','',follow(b)));
+    assert.deepEqual(await ok(request(a,'GET','interactions/'+room+'/help/followers')),{[b.localId]:true});
+    await denied(request(a,'GET',privateRow(b)));
+    await denied(request(b,'PUT',privateRow(b)+'/seen','invented'));
+    await ok(request(a,'PUT',path+'solution',{...msg(a,'Solution'),replyTo:'help'}));
+    await ok(request(a,'PUT','interactions/'+room+'/help/answer','solution'));
+    await ok(request(b,'PUT',privateRow(b)+'/seen','solution'));
+    await ok(request(b,'PUT',privateRow(b)+'/reviewAt',Date.now()+86400000));
+    await denied(request(a,'PUT',privateRow(b)+'/reviewAt',0));
+    await ok(request(b,'DELETE','roomMembers/'+room+'/'+b.localId));
+    await denied(request(b,'GET',path+'solution'));
+    await denied(request(b,'DELETE',publicFlag(b)));
+    await ok(request(b,'PATCH','',{[publicFlag(b)]:null,[privateRow(b)]:null}));
+    assert.equal(await ok(request(b,'GET',privateRow(b))),null);
+  });
   await t.test('Invitation acceptance and community publishing',async()=>{
     const ab='contacts/'+a.localId+'/'+b.localId,ba='contacts/'+b.localId+'/'+a.localId;
     await ok(request(a,'PATCH','',{[ab]:'sent',[ba]:'received'}));

@@ -10,6 +10,7 @@ import 'package:rxdart/rxdart.dart';
 import '../data/chat_repository.dart';
 import '../domain/chat.dart';
 import 'chat_widgets.dart';
+import 'followed_questions.dart';
 
 part 'chat_tools.dart';
 
@@ -135,6 +136,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 ('search', 'Tìm tin nhắn'),
                 ('pins', 'Tin nhắn đã ghim'),
                 ('study', 'Sổ đáp án'),
+                ('following', 'Câu mình đang theo dõi'),
                 ('review', 'Thẻ tự ôn'),
                 ('nick', 'Biệt danh đối phương / phòng'),
                 ('self', 'Biệt danh của tôi'),
@@ -277,6 +279,11 @@ class _ChatScreenState extends State<ChatScreen> {
                                             data.messages[i - 1].senderId !=
                                                 m.senderId;
                                         final info = fields(meta[m.id]);
+                                        final followers = fields(
+                                          info['followers'],
+                                        );
+                                        final following =
+                                            followers[repo.uid] == true;
                                         final target = data.messages
                                             .where((row) => row.id == m.replyTo)
                                             .firstOrNull;
@@ -348,6 +355,44 @@ class _ChatScreenState extends State<ChatScreen> {
                                                     arguments: m.senderId,
                                                   ),
                                             ),
+                                            if (m.kind == 'question' &&
+                                                !m.recalled &&
+                                                !cached)
+                                              Wrap(
+                                                crossAxisAlignment:
+                                                    WrapCrossAlignment.center,
+                                                children: [
+                                                  if (!own)
+                                                    TextButton.icon(
+                                                      onPressed: enabled
+                                                          ? () => perform(
+                                                              () => repo
+                                                                  .followQuestion(
+                                                                    chat.id,
+                                                                    m.id,
+                                                                    !following,
+                                                                  ),
+                                                            )
+                                                          : null,
+                                                      icon: Icon(
+                                                        following
+                                                            ? Icons
+                                                                  .bookmark_added
+                                                            : Icons
+                                                                  .pan_tool_alt_outlined,
+                                                      ),
+                                                      label: Text(
+                                                        following
+                                                            ? 'Đang theo dõi'
+                                                            : 'Mình cũng đang bí',
+                                                      ),
+                                                    ),
+                                                  if (followers.isNotEmpty)
+                                                    Text(
+                                                      '${followers.length} bạn cùng vướng',
+                                                    ),
+                                                ],
+                                              ),
                                             Wrap(
                                               crossAxisAlignment:
                                                   WrapCrossAlignment.center,

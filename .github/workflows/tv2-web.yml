@@ -46,7 +46,7 @@ jobs:
           python -u tools/preview.py --web-only --archive "$RUNNER_TEMP/tv2-web.zip" &
           server_pid=$!
           trap 'kill "$server_pid" || true' EXIT
-          npx --yes firebase-tools@15.37.0 emulators:exec --only auth,database --project demo-classroom-tv2 "python tools/demo_accounts.py && node test/browser/chat.cjs && node test/browser/study.cjs"
+          npx --yes firebase-tools@15.37.0 emulators:exec --only auth,database --project demo-classroom-tv2 "python tools/demo_accounts.py && node test/browser/chat.cjs && node test/browser/study.cjs && node test/browser/follow.cjs"
   android-demo:
     runs-on: ubuntu-latest
     timeout-minutes: 30
