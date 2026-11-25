@@ -286,10 +286,19 @@ class _ChatScreenState extends State<ChatScreen> {
                                               : CrossAxisAlignment.start,
                                           children: [
                                             if (m.replyTo != null)
-                                              Text(
-                                                '↳ ${target?.content ?? "Trả lời tin nhắn trước"}',
-                                                maxLines: 2,
-                                                overflow: TextOverflow.ellipsis,
+                                              TextButton(
+                                                onPressed: () => perform(
+                                                  () => showOriginal(
+                                                    m.replyTo!,
+                                                    data.messages,
+                                                  ),
+                                                ),
+                                                child: Text(
+                                                  '↳ ${target?.content ?? "Trả lời tin nhắn trước"}',
+                                                  maxLines: 2,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
                                               ),
                                             if (m.kind == 'question')
                                               Text(

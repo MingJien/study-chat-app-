@@ -242,8 +242,10 @@ extension _ChatTools on _ChatScreenState {
       );
       if (save != true) return;
     }
+    final name = m.content.replaceAll(RegExp(r'[/\\:*?"<>|]'), '_');
+    final hasExtension = name.lastIndexOf('.') > 0 && !name.endsWith('.');
     await FilePicker.saveFile(
-      fileName: m.content.replaceAll(RegExp(r'[/\\:*?"<>|]'), '_'),
+      fileName: hasExtension ? name : '$name.bin',
       bytes: bytes,
     );
   }
@@ -253,7 +255,10 @@ extension _ChatTools on _ChatScreenState {
     Map<String, dynamic> info,
     List<ChatMessage> rows,
   ) async {
-    final parent = rows.where((r) => r.id == m.replyTo).firstOrNull;
+    final parent = m.replyTo == null
+        ? null
+        : await replyTarget(m.replyTo!, rows);
+    if (!mounted) return;
     final pick = await choose('Tùy chọn tin nhắn', [
       if (!m.recalled) ...[
         ('reply', 'Trả lời'),
@@ -298,6 +303,46 @@ extension _ChatTools on _ChatScreenState {
           fields(info['reactions'])[repo.uid] == pick ? null : pick,
         );
     }
+  }
+
+  Future<ChatMessage?> replyTarget(String id, List<ChatMessage> rows) async {
+    final recent = rows.where((r) => r.id == id).firstOrNull;
+    if (recent != null || !repo.online) return recent;
+    final raw = await repo.rest.request(
+      repo.uid,
+      'GET',
+      'messages/${chat.id}/$id',
+    );
+    final message = ChatMessage.decode(id, raw);
+    if (message == null) return null;
+    final prefs = fields(
+      await repo.rest.request(
+        repo.uid,
+        'GET',
+        'chatPrefs/${repo.uid}/${chat.id}',
+      ),
+    );
+    return repo.visible([message], prefs).firstOrNull;
+  }
+
+  Future<void> showOriginal(String id, List<ChatMessage> rows) async {
+    final original = await replyTarget(id, rows);
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: const Text('Tin nhắn được trả lời'),
+        content: SelectableText(
+          original?.content ?? 'Tin gốc không có trong lịch sử hiện tại.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(c),
+            child: const Text('Đóng'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> chatTool(
