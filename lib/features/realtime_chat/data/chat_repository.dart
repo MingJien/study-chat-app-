@@ -86,8 +86,24 @@ class ChatRepository implements ChatApi {
     }
   }
 
+  // The inbox, profile and open conversation can observe the same query.
+  // Replay its current snapshot to every screen, including an empty snapshot.
+  final _queries = <String, Stream<DatabaseEvent>>{};
+
+  Stream<DatabaseEvent> _watch(String key, Query Function() query) => Rx.defer(
+    () => _queries.putIfAbsent(
+      key,
+      () => query().onValue
+          .doOnCancel(() {
+            _queries.remove(key);
+          })
+          .shareReplay(maxSize: 1),
+    ),
+    reusable: true,
+  );
+
   Stream<Object?> value(String path) =>
-      db.ref(path).onValue.map((e) => e.snapshot.value);
+      _watch(path, () => db.ref(path)).map((event) => event.snapshot.value);
   @override
   Stream<ChatPresence> watchPresence(String uid) =>
       value('presence/$uid').map((v) {
@@ -149,12 +165,12 @@ class ChatRepository implements ChatApi {
     }
   }
 
-  Stream<List<ChatMessage>> _recent(String id, int limit) => db
-      .ref('messages/$id')
-      .orderByChild('createdAt')
-      .limitToLast(limit)
-      .onValue
-      .map((e) {
+  Stream<List<ChatMessage>> _recent(String id, int limit) =>
+      _watch(
+        'messages/$id?recent=$limit',
+        () =>
+            db.ref('messages/$id').orderByChild('createdAt').limitToLast(limit),
+      ).map((e) {
         final rows = <ChatMessage>[];
         for (final child in e.snapshot.children) {
           final message = ChatMessage.decode(child.key!, child.value);

@@ -57,8 +57,13 @@ async function run(){
     await name(a,'Lật xem đáp án').waitFor();
     let found=false;
     while(true){
+      const targetCard=await name(a,question).isVisible();
       await click(a,'Lật xem đáp án');
-      if((await a.locator('body').ariaSnapshot()).includes(answer))found=true;
+      await name(a,'Đã nhớ').waitFor();
+      if(targetCard){
+        await name(a,answer).waitFor();
+        found=true;
+      }
       await click(a,'Đã nhớ');
       await name(a,'Lật xem đáp án').or(name(a,'Hoàn tất')).first().waitFor();
       if(await name(a,'Hoàn tất').isVisible())break;
