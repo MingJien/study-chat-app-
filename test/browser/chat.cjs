@@ -200,9 +200,10 @@ async function run() {
     const invitationMessage='Tin đầu tiên từ liên kết mời '+runId;
     await send(p,invitationMessage);
     await expectText(p,invitationMessage);
-    await label(p,'Back').click();
+    const back=p.getByRole('button',{name:/^Back(?: Back)?$/});
+    await back.click();
     await expectText(p,'Hồ sơ sinh viên');
-    await label(p,'Back').click();
+    await back.click();
     const manage=label(p,'Quản lý hội thoại');
     await manage.click();
     await p.getByRole('menuitem',{name:'Lưu trữ hội thoại'}).click();
@@ -213,7 +214,8 @@ async function run() {
     await manage.click();
     await p.getByRole('menuitem',{name:'Ghim hội thoại',exact:true}).click();
     await p.getByRole('checkbox',{name:'Đã ghim'}).click();
-    await expectText(p,invitationMessage);
+    await manage.waitFor();
+    await p.getByRole('button',{name:new RegExp(invitationMessage)}).first().waitFor();
     assert.deepEqual(errors,[]);
     passed=true;
     console.log('PASS · registration, DM both ways, multitab presence, SQLite offline, reconnect, group, pin, theme, session and sign-out');

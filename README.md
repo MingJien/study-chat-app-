@@ -6,7 +6,9 @@
 
 Mở thư mục này, chọn **Run and Debug → TV2 · Mở Study Chat trong trình duyệt** và nhấn **F5**. Bản web đã biên dịch dùng Firebase Emulator trên máy. Có thể chạy cùng cấu hình bằng `python tools/preview.py` rồi mở <http://127.0.0.1:8765>.
 
-Xem [hướng dẫn TV2 và tài liệu bàn giao](docs/members/tv2/README.md) để tạo hai tài khoản thử, mở phòng và kiểm tra khi mất mạng.
+Chọn **Minh An**, **Hải Bình** hoặc **Lan Chi** trên màn hình đầu để vào thẳng tài khoản demo. Mở thêm cửa sổ InPrivate và chọn một bạn khác để thử chat hai chiều. Ba nút này chỉ xuất hiện trong cấu hình Emulator. Xem [hướng dẫn TV2](docs/members/tv2/README.md).
+
+Trong chat, chọn **Thêm vào tin nhắn → Đặt câu hỏi học tập**. Người khác trả lời bằng thao tác **Trả lời** trên câu hỏi. Người đặt câu hỏi mở menu của lời giải và chọn **Chốt làm đáp án cho câu hỏi**. Cả hai có thể mở **Công cụ hội thoại → Thẻ tự ôn**, lật thẻ và tự đánh giá ngay trong cuộc trò chuyện.
 
 ## Chia phần việc
 
