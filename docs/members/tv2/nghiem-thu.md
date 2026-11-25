@@ -1,5 +1,19 @@
 # Biên bản kiểm thử TV2
 
+## Kiểm thử phần mở rộng ngày 25/11/2026
+
+| Luồng | Điều kiện nghiệm thu |
+| --- | --- |
+| Tài khoản demo | Mỗi nút Minh An, Hải Bình, Lan Chi mở đúng phiên Emulator. Hai hồ sơ trình duyệt có thể nhắn tin cho nhau. |
+| Chat học tập | B trả lời câu hỏi của A. A chốt lời giải. Bộ thẻ hiển thị câu hỏi trước, đáp án sau khi lật và ghi nhận lượt tự đánh giá. Sau khi B thu hồi, A thấy trạng thái thu hồi. |
+| Tệp đính kèm | A gửi một tệp văn bản UTF-8. B tải xuống được tệp có tên và nội dung từng byte khớp với bản gốc. |
+| Liên kết mời và hộp thư | Từ hồ sơ mở bằng liên kết, tài khoản mới gửi tin đầu tiên, quay lại hộp thư, lưu trữ, khôi phục và ghim cuộc chat trong cùng phiên. |
+| Quan hệ và nội dung xã hội | Hai phiên Edge gửi và chấp nhận lời mời kết bạn. Story chữ đậm xuất hiện cho người đọc. Bộ test Emulator kiểm tra quyền ghi quan hệ của từng bên và từ chối đọc nội dung story đã hết hạn. |
+
+Kịch bản [chat và ngoại tuyến](../../../test/browser/chat.cjs) và [thẻ tự ôn, thu hồi, tải tệp](../../../test/browser/study.cjs) chạy trên trình duyệt thật. Kết quả theo từng bước nằm trong [GitHub Actions của bản mở rộng](https://github.com/MingJien/study-chat-app-/actions/runs/45592465480).
+
+## Kiểm thử nền ban đầu
+
 Ngày kiểm tra 24/11/2026. Đối tượng kiểm thử là mã nguồn trên nhánh `tv2`, Firebase Auth và Realtime Database Emulator, SQLite và bản Flutter Web release. Các tài khoản thử được tạo ở thời điểm chạy. Máy phát triển dùng Edge và Chrome, hai hồ sơ trình duyệt độc lập và một tab bổ sung để mô phỏng nhiều kết nối của cùng UID.
 
 | Hạng mục | Thao tác và kết quả quan sát | Bằng chứng |
