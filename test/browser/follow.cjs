@@ -1,5 +1,4 @@
 const {chromium}=require(process.env.TV2_PLAYWRIGHT || 'playwright');
-const assert=require('node:assert/strict');
 const {click,fill,messageVisible,actionOnLast}=require('./study.cjs');
 const origin='http://127.0.0.1:8765';
 const back=p=>p.getByRole('button',{name:/^Back(?: Back)?$/}).click();
@@ -36,19 +35,20 @@ async function run(){
     await messageVisible(a,answer);await actionOnLast(a,'Chốt làm đáp án cho câu hỏi');
     const notice=c.getByRole('button',{name:/Câu bạn theo dõi đã có lời giải/});
     await notice.click();
-    await c.getByText('Lời giải đã chốt',{exact:true}).waitFor();
-    assert.ok((await c.locator('body').ariaSnapshot()).includes(answer));
+    await messageVisible(c,answer);
     await click(c,'Hẹn ngày ôn');await click(c,'Lưu lịch ôn');
     await click(c,'Tự ôn câu này');await click(c,'Lật xem lời giải');
-    await c.getByText('Lời giải đã chốt',{exact:true}).waitFor();
+    await messageVisible(c,answer);
     await c.reload();
     await c.getByRole('button',{name:'Câu mình đang theo dõi'}).click();
-    await c.getByRole('button',{name:new RegExp(question.split('?')[0])}).click();
+    const followedRow=c.getByRole('button',{name:new RegExp(stamp)});
+    await followedRow.click();
     await c.getByText(/Ngày ôn riêng của bạn/).waitFor();
     await actionOnLast(b,'Thu hồi với mọi người');await click(b,'Thu hồi');
     await c.getByText('Đang chờ người hỏi chốt lời giải.').waitFor();
     await click(c,'Bỏ theo dõi câu hỏi');
-    await c.getByText(/Chọn “Mình cũng đang bí”/).waitFor();
+    await c.getByRole('heading',{name:'Câu mình đang theo dõi'}).waitFor();
+    await followedRow.waitFor({state:'detached'});
     console.log('PASS · three students, follow, live solution, private review, reload, recall and unfollow');
   }catch(e){
     for(const p of pages) console.error((await p.locator('body').ariaSnapshot()).slice(-1400));

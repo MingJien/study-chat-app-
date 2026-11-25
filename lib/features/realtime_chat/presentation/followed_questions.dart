@@ -193,9 +193,11 @@ class _SolutionPageState extends State<SolutionPage> {
               style: Theme.of(context).textTheme.labelLarge,
             ),
             const SizedBox(height: 8),
-            SelectableText(
-              item.question.content,
-              style: Theme.of(context).textTheme.titleLarge,
+            SelectionArea(
+              child: Text(
+                item.question.content,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
             ),
             const SizedBox(height: 18),
             if (answer == null)
@@ -217,7 +219,7 @@ class _SolutionPageState extends State<SolutionPage> {
                         style: Theme.of(context).textTheme.labelLarge,
                       ),
                       const SizedBox(height: 8),
-                      SelectableText(answer.content),
+                      SelectionArea(child: Text(answer.content)),
                     ],
                   ),
                 ),

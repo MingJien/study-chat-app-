@@ -9,7 +9,7 @@ async function click(page, value) {
   await name(page,value).click();
 }
 async function messageVisible(page, value) {
-  await page.getByText(value,{exact:true}).or(
+  await page.getByText(value,{exact:true}).or(page.getByLabel(value,{exact:true})).or(
     page.getByRole('group',{name:new RegExp(value.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'))})
   ).first().waitFor();
 }
