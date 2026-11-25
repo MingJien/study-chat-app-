@@ -1,5 +1,10 @@
 # Biên bản kiểm thử TV2
 
+## Theo dõi câu hỏi và hẹn ngày ôn
+
+- Ba phiên trình duyệt trong cùng phòng lần lượt đặt câu hỏi, trả lời và bấm **Mình cũng đang bí**. Khi người hỏi chốt lời giải, người theo dõi mở thông báo để đọc đúng câu, chọn ngày ôn, tự lật thẻ và xem lại lịch sau khi tải lại trang. Khi tác giả thu hồi lời giải, màn hình đang mở trở về **Đang chờ người hỏi chốt lời giải**. [Kịch bản ba tài khoản](../../../test/browser/follow.cjs)
+- Bộ kiểm thử Firebase xác minh số người theo dõi không tăng khi cùng tài khoản bấm lại, hai chỉ mục được ghi cùng nhau, người ngoài phòng không thể đăng ký và tài khoản khác không thể đọc hoặc sửa lịch riêng. [Kết quả CI](https://github.com/MingJien/study-chat-app-/actions/runs/45597999537)
+
 ## Kiểm thử phần mở rộng ngày 25/11/2026
 
 | Luồng | Điều kiện nghiệm thu |
