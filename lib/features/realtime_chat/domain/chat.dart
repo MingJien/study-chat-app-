@@ -30,7 +30,17 @@ Map<String, dynamic> fields(Object? raw) =>
     raw is Map ? Map<String, dynamic>.from(raw) : {};
 
 class ChatMessage {
-  const ChatMessage(this.id, this.senderId, this.content, this.createdAt);
+  const ChatMessage(
+    this.id,
+    this.senderId,
+    this.content,
+    this.createdAt, {
+    this.kind,
+    this.replyTo,
+    this.recalled = false,
+  });
+  final String? kind, replyTo;
+  final bool recalled;
   final String id, senderId, content;
   final int createdAt;
 
@@ -41,7 +51,15 @@ class ChatMessage {
         m['createdAt'] is! int) {
       return null;
     }
-    return ChatMessage(id, m['senderId'], m['content'], m['createdAt']);
+    return ChatMessage(
+      id,
+      m['senderId'],
+      m['content'],
+      m['createdAt'],
+      kind: m['kind'] as String?,
+      replyTo: m['replyTo'] as String?,
+      recalled: m['recalled'] == true,
+    );
   }
 
   static int compare(ChatMessage a, ChatMessage b) {
@@ -65,11 +83,15 @@ class ChatSummary {
     this.last = '',
     this.time = 0,
     this.online = false,
+    this.pinned = false,
+    this.archived = false,
+    this.lastSender,
   });
   final String id, title, avatar, last;
   final String? peerUid;
   final int time;
-  final bool online;
+  final bool online, pinned, archived;
+  final String? lastSender;
   ChatType get type => peerUid == null ? ChatType.group : ChatType.direct;
 }
 

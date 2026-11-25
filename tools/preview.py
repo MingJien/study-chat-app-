@@ -14,6 +14,8 @@ from urllib.parse import unquote, urlsplit
 from urllib.request import urlopen
 import zipfile
 
+from demo_accounts import seed_demo_accounts
+
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / ".local-data/firebase"
 ARCHIVE = ROOT / "preview/study-chat-web.zip"
@@ -114,6 +116,8 @@ def main():
     except (OSError, ValueError):
         running = False
     if running and (args.web_only or emulators_ready()):
+        if not args.web_only:
+            seed_demo_accounts()
         print(f"TV2 READY http://127.0.0.1:{args.port}", flush=True)
         return
     with http.server.ThreadingHTTPServer(("127.0.0.1", args.port), WebHandler) as server:
@@ -122,6 +126,7 @@ def main():
         try:
             if not args.web_only:
                 proc = start_emulators()
+                seed_demo_accounts()
             print(f"TV2 READY http://127.0.0.1:{args.port}", flush=True)
             server.serve_forever()
         except KeyboardInterrupt:

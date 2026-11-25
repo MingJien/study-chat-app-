@@ -125,6 +125,39 @@ class _SessionFormState extends State<SessionForm> {
               ?.copyWith(fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 20),
+        if (!profile &&
+            !register &&
+            const bool.fromEnvironment(
+              'FIREBASE_EMULATOR',
+              defaultValue: true,
+            )) ...[
+          Text(
+            'Vào nhanh tài khoản demo',
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+          Wrap(
+            spacing: 6,
+            children: [
+              for (final (slug, display) in [
+                ('an', 'Minh An'),
+                ('binh', 'Hải Bình'),
+                ('chi', 'Lan Chi'),
+              ])
+                ActionChip(
+                  avatar: const Icon(Icons.person_outline),
+                  label: Text(display),
+                  onPressed: busy
+                      ? null
+                      : () {
+                          email.text = '$slug@demo.example.test';
+                          password.text = 'StudyChat-local-demo';
+                          submit();
+                        },
+                ),
+            ],
+          ),
+          const Divider(height: 24),
+        ],
         if (profile)
           TextField(
             controller: name,

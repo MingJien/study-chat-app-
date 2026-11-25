@@ -1,4 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+
+import '../features/realtime_chat/domain/chat.dart';
+import '../features/realtime_chat/presentation/chat_widgets.dart' show ChatArgs;
+import 'contacts.dart';
 
 import '../features/realtime_chat/data/chat_repository.dart';
 import '../features/realtime_chat/presentation/conversations_screen.dart';
@@ -22,6 +28,57 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   late int tab = widget.initialTab;
+  Map<String, int>? seen;
+  late final StreamSubscription<List<ChatSummary>> notices;
+  @override
+  void initState() {
+    super.initState();
+    final invite = Uri.base.queryParameters['invite'];
+    if (invite != null &&
+        invite != widget.repo.uid &&
+        RegExp(r'^[a-zA-Z0-9_-]{1,128}$').hasMatch(invite)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          Navigator.pushNamed(context, '/profile', arguments: invite);
+        }
+      });
+    }
+    notices = widget.repo.watchConversations(widget.repo.uid).listen((rows) {
+      if (!mounted || !widget.repo.online) return;
+      final old = seen;
+      seen = {for (final r in rows) r.id: r.time};
+      if (old == null || ModalRoute.of(context)?.isCurrent != true) return;
+      for (final r in rows) {
+        if (r.time > (old[r.id] ?? 0) &&
+            r.lastSender != null &&
+            r.lastSender != widget.repo.uid &&
+            !r.archived) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Tin mới từ ${r.title}'),
+              duration: const Duration(seconds: 2),
+              action: SnackBarAction(
+                label: 'Mở',
+                onPressed: () => Navigator.pushNamed(
+                  context,
+                  '/chat',
+                  arguments: ChatArgs.existing(r),
+                ),
+              ),
+            ),
+          );
+          break;
+        }
+      }
+    }, onError: (Object _) {});
+  }
+
+  @override
+  void dispose() {
+    notices.cancel();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final repo = widget.repo;
@@ -118,6 +175,7 @@ class _AppShellState extends State<AppShell> {
                         ),
                       ],
                     ),
+                    3 => ContactsPage(repo),
                     _ => ChatDirectory(
                       repo,
                       key: ValueKey(tab),

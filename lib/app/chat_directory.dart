@@ -1,5 +1,8 @@
 import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+
+import 'contacts.dart';
 
 import '../features/realtime_chat/data/chat_repository.dart';
 import '../features/realtime_chat/domain/chat.dart';
@@ -216,6 +219,20 @@ class _ChatDirectoryState extends State<ChatDirectory> {
                             : PopupMenuButton<String>(
                                 tooltip: 'Tùy chọn phòng',
                                 onSelected: (v) => run(() async {
+                                  if (v == 'rename') {
+                                    final name = await askText(
+                                      context,
+                                      'Tên mới của phòng',
+                                      60,
+                                    );
+                                    if (name != null && name.isNotEmpty) {
+                                      await repo.write(
+                                        'rooms/$id/roomName',
+                                        name,
+                                      );
+                                    }
+                                    return;
+                                  }
                                   if (v == 'leave') {
                                     await repo.rest.request(
                                       repo.uid,
@@ -253,6 +270,10 @@ class _ChatDirectoryState extends State<ChatDirectory> {
                                 }),
                                 itemBuilder: (_) => [
                                   if (owner) ...[
+                                    const PopupMenuItem(
+                                      value: "rename",
+                                      child: Text("Đổi tên phòng"),
+                                    ),
                                     const PopupMenuItem(
                                       value: 'pin',
                                       child: Text('Ghim thông báo'),
@@ -313,6 +334,75 @@ class _PublicProfileState extends State<PublicProfile> {
               Text(name, style: Theme.of(context).textTheme.headlineSmall),
               if (p['className'] != null) Text(p['className']),
               if (p['bio'] != null) Text(p['bio']),
+              if (widget.uid == widget.repo.uid) ...[
+                TextButton.icon(
+                  icon: const Icon(Icons.edit),
+                  label: const Text('Chỉnh sửa hồ sơ'),
+                  onPressed: () async {
+                    final field = await showModalBottomSheet<String>(
+                      context: context,
+                      builder: (c) => Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          for (final (key, label) in [
+                            ('displayName', 'Tên hiển thị'),
+                            ('className', 'Lớp học'),
+                            ('bio', 'Giới thiệu'),
+                          ])
+                            ListTile(
+                              title: Text(label),
+                              onTap: () => Navigator.pop(c, key),
+                            ),
+                        ],
+                      ),
+                    );
+                    if (field == null || !context.mounted) return;
+                    final text = await askText(
+                      context,
+                      'Cập nhật hồ sơ',
+                      field == 'bio' ? 150 : 50,
+                    );
+                    if (text == null || text.isEmpty || !context.mounted) {
+                      return;
+                    }
+                    await socialAction(context, () async {
+                      await widget.repo.write(
+                        'profiles/${widget.uid}/$field',
+                        text,
+                      );
+                      if (field == 'displayName') {
+                        await widget.repo.auth.currentUser?.updateDisplayName(
+                          text,
+                        );
+                      }
+                    });
+                  },
+                ),
+                TextButton.icon(
+                  icon: const Icon(Icons.link),
+                  label: const Text('Sao chép liên kết kết bạn'),
+                  onPressed: () async {
+                    await Clipboard.setData(
+                      ClipboardData(
+                        text: Uri.base
+                            .replace(
+                              queryParameters: {'invite': widget.uid},
+                              fragment: '',
+                            )
+                            .toString(),
+                      ),
+                    );
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Đã sao chép liên kết mời.'),
+                        ),
+                      );
+                    }
+                  },
+                ),
+              ] else
+                ContactButton(widget.repo, widget.uid),
               if (widget.uid != widget.repo.uid)
                 Padding(
                   padding: const EdgeInsets.all(16),

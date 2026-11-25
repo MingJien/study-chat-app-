@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_database/firebase_database.dart';
 
 import '../data/chat_repository.dart';
 import '../domain/chat.dart';
@@ -16,6 +17,7 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
   late var rows = widget.repo.watchConversations(widget.repo.uid);
   String keyword = '';
   ChatType? filter;
+  bool archived = false, pinned = false;
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
@@ -64,9 +66,31 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
               ])
                 ChoiceChip(
                   label: Text(name),
-                  selected: filter == value,
-                  onSelected: (_) => setState(() => filter = value),
+                  selected: !archived && !pinned && filter == value,
+                  onSelected: (_) => setState(() {
+                    filter = value;
+                    archived = false;
+                    pinned = false;
+                  }),
                 ),
+              ChoiceChip(
+                label: const Text("Đã ghim"),
+                selected: pinned,
+                onSelected: (_) => setState(() {
+                  pinned = true;
+                  archived = false;
+                  filter = null;
+                }),
+              ),
+              ChoiceChip(
+                label: const Text("Lưu trữ"),
+                selected: archived,
+                onSelected: (_) => setState(() {
+                  archived = true;
+                  pinned = false;
+                  filter = null;
+                }),
+              ),
             ],
           ),
         ),
@@ -93,6 +117,8 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
               final items = s.data!
                   .where(
                     (r) =>
+                        r.archived == archived &&
+                        (!pinned || r.pinned) &&
                         (filter == null || r.type == filter) &&
                         r.title.toLowerCase().contains(keyword),
                   )
@@ -146,9 +172,74 @@ class _ConversationsScreenState extends State<ConversationsScreen> {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      trailing: Text(
-                        timeLabel(r.time),
-                        style: Theme.of(context).textTheme.labelSmall,
+                      trailing: PopupMenuButton<String>(
+                        tooltip: 'Quản lý hội thoại',
+                        onSelected: (action) async {
+                          try {
+                            if (action == 'clear') {
+                              final confirmed = await showDialog<bool>(
+                                context: context,
+                                builder: (c) => AlertDialog(
+                                  title: const Text('Xóa lịch sử ở phía bạn?'),
+                                  content: const Text(
+                                    'Tin mới sau thời điểm này vẫn xuất hiện.',
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(c),
+                                      child: const Text('Hủy'),
+                                    ),
+                                    FilledButton(
+                                      onPressed: () => Navigator.pop(c, true),
+                                      child: const Text('Xóa lịch sử'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                              if (confirmed == true) {
+                                await widget.repo.preference(
+                                  r.id,
+                                  'clearedAt',
+                                  ServerValue.timestamp,
+                                );
+                              }
+                            } else {
+                              await widget.repo.preference(
+                                r.id,
+                                action,
+                                action == 'pinned'
+                                    ? (r.pinned ? null : true)
+                                    : (r.archived ? null : true),
+                              );
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(readableError(e))),
+                              );
+                            }
+                          }
+                        },
+                        itemBuilder: (_) => [
+                          PopupMenuItem(
+                            value: 'pinned',
+                            child: Text(
+                              r.pinned ? 'Bỏ ghim hội thoại' : 'Ghim hội thoại',
+                            ),
+                          ),
+                          PopupMenuItem(
+                            value: 'archived',
+                            child: Text(
+                              r.archived
+                                  ? 'Đưa về hộp thư'
+                                  : 'Lưu trữ hội thoại',
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'clear',
+                            child: Text('Xóa hội thoại phía tôi'),
+                          ),
+                        ],
                       ),
                       onTap: () => Navigator.pushNamed(
                         context,

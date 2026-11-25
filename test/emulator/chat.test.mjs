@@ -87,6 +87,42 @@ test('TV2 · Firebase Auth, RTDB và quyền theo hội thoại',async t=>{
     await denied(request(b,'GET','messages/'+room,undefined,list));
     await denied(request(a,'DELETE','roomMembers/'+room+'/'+a.localId));
   });
+  await t.test('Study questions, attachments, recall and private preferences',async()=>{
+    const path='messages/'+id+'/';
+    await ok(request(a,'PUT',path+'q',{...msg(a,'Question'),kind:'question'}));
+    await ok(request(b,'PUT',path+'answer',{...msg(b,'Answer'),replyTo:'q'}));
+    const card='interactions/'+id+'/q';
+    await ok(request(a,'PUT',card+'/pinned',true));
+    await ok(request(b,'PUT',card+'/reactions/'+b.localId,'💡'));
+    await denied(request(b,'PUT',card+'/answer','answer'));
+    await ok(request(a,'PUT',card+'/answer','answer'));
+    await denied(request(c,'GET','interactions/'+id));
+    const file='attachments/'+id+'/file';
+    await ok(request(a,'PATCH','',{[path+'file']:{...msg(a,'notes.txt'),kind:'file'},[file]:'YWJj'}));
+    assert.equal(await ok(request(b,'GET',file)),'YWJj');
+    await denied(request(c,'GET',file));
+    await ok(request(a,'PUT','chatPrefs/'+a.localId+'/'+id+'/hidden/file',true));
+    await denied(request(b,'GET','chatPrefs/'+a.localId));
+    const m=await ok(request(a,'GET',path+'file'));
+    const tombstone={senderId:a.localId,createdAt:m.createdAt,content:'Tin nhắn đã thu hồi',recalled:true};
+    await denied(request(b,'PUT',path+'file',tombstone));
+    await ok(request(a,'PATCH','',{[path+'file']:tombstone,[file]:null}));
+    await denied(request(b,'GET',file));
+  });
+  await t.test('Invitation acceptance and community publishing',async()=>{
+    const ab='contacts/'+a.localId+'/'+b.localId,ba='contacts/'+b.localId+'/'+a.localId;
+    await ok(request(a,'PATCH','',{[ab]:'sent',[ba]:'received'}));
+    await denied(request(a,'PATCH','',{[ab]:'friends',[ba]:'friends'}));
+    await ok(request(b,'PATCH','',{[ab]:'friends',[ba]:'friends'}));
+    await ok(request(b,'PATCH','',{[ab]:null,[ba]:null}));
+    for(const col of ['posts','stories']){
+      await ok(request(a,'PUT',col+'/'+unique,{author:a.localId,text:'Review',style:'checklist',createdAt:stamp}));
+      const q={orderBy:'"createdAt"',limitToLast:'50',...(col==='stories'?{startAt:String(Date.now()-86400000)}:{})};
+      assert.ok((await ok(request(b,'GET',col,undefined,q)))[unique]);
+      await denied(request(b,'DELETE',col+'/'+unique));
+      await ok(request(a,'DELETE',col+'/'+unique));
+    }
+  });
   await t.test('T19 · các phiên độc lập, chỉ chủ tài khoản được ghi presence',async()=>{
     const path='presence/'+a.localId;
     for(const key of ['tab1','tab2']) await ok(request(a,'PUT',path+'/sessions/'+key,true));

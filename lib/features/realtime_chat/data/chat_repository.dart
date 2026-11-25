@@ -116,22 +116,36 @@ class ChatRepository implements ChatApi {
     String conversationId,
     String content, {
     String? messageId,
+    String? kind,
+    String? replyTo,
+    String? attachment,
   }) async {
     _check(network: true);
     final clean = validateContent(content);
     final id = messageId ?? newMessageId(conversationId);
     final path = 'messages/$conversationId/$id';
     try {
-      await rest.request(uid, 'PUT', path, {
+      final payload = {
         'senderId': uid,
         'content': clean,
         'createdAt': ServerValue.timestamp,
+        'kind': ?kind,
+        'replyTo': ?replyTo,
+      };
+      await rest.request(uid, 'PATCH', '', {
+        path: payload,
+        'attachments/$conversationId/$id': ?attachment,
       });
     } on ChatFailure {
       // An earlier attempt can have reached the server before the reply was lost.
       if (!online || !active) rethrow;
       final existing = fields(await rest.request(uid, 'GET', path));
-      if (existing['senderId'] != uid || existing['content'] != clean) rethrow;
+      if (existing['senderId'] != uid ||
+          existing['content'] != clean ||
+          existing['kind'] != kind ||
+          existing['replyTo'] != replyTo) {
+        rethrow;
+      }
     }
   }
 
@@ -161,9 +175,13 @@ class ChatRepository implements ChatApi {
   Stream<ChatPageData> watchMessages(String conversationId, ChatType type) {
     _check();
     Stream<ChatPageData> live() =>
-        _recent(conversationId, 30).asyncMap((rows) async {
+        Rx.combineLatest2(
+          _recent(conversationId, 30),
+          value('chatPrefs/$uid/$conversationId'),
+          (rows, p) => visible(rows, fields(p)),
+        ).asyncMap((rows) async {
           _check();
-          await cache.saveMessages(uid, conversationId, rows);
+          await cache.saveMessages(uid, conversationId, rows, snapshot: true);
           return ChatPageData(rows, cached: false);
         });
     return connection.switchMap((connected) {
@@ -189,6 +207,71 @@ class ChatRepository implements ChatApi {
     });
   }
 
+  List<ChatMessage> visible(
+    List<ChatMessage> rows,
+    Map<String, dynamic> prefs,
+  ) => rows
+      .where(
+        (m) =>
+            m.createdAt > (prefs['clearedAt'] as int? ?? 0) &&
+            !fields(prefs['hidden']).containsKey(m.id),
+      )
+      .toList();
+  Future<void> write(String path, Object? data) async {
+    _check(network: true);
+    await rest.request(uid, data == null ? 'DELETE' : 'PUT', path, data);
+  }
+
+  Future<void> preference(String cid, String field, Object? data) =>
+      write('chatPrefs/$uid/$cid/$field', data);
+  Future<void> recall(String cid, ChatMessage m) async {
+    _check(network: true);
+    await rest.request(uid, 'PATCH', '', {
+      'messages/$cid/${m.id}': {
+        'senderId': uid,
+        'createdAt': m.createdAt,
+        'content': 'Tin nhắn đã thu hồi',
+        'recalled': true,
+      },
+      if (m.kind == 'file' || m.kind == 'image')
+        'attachments/$cid/${m.id}': null,
+    });
+  }
+
+  Future<List<ChatMessage>> search(String cid, String text) async {
+    _check(network: true);
+    final prefs = fields(await rest.request(uid, 'GET', 'chatPrefs/$uid/$cid'));
+    final results = <ChatMessage>[];
+    ChatMessage? cursor;
+    while (results.length < 100) {
+      _check(network: true);
+      Query query = db.ref('messages/$cid').orderByChild('createdAt');
+      if (cursor != null) {
+        query = query.endBefore(cursor.createdAt, key: cursor.id);
+      }
+      final snap = await query.limitToLast(30).get();
+      final rows =
+          snap.children
+              .map((e) => ChatMessage.decode(e.key!, e.value))
+              .nonNulls
+              .toList()
+            ..sort(ChatMessage.compare);
+      results.addAll(
+        visible(rows, prefs).reversed.where(
+          (m) =>
+              !m.recalled &&
+              m.content.toLowerCase().contains(text.toLowerCase()),
+        ),
+      );
+      if (rows.length < 30 ||
+          rows.first.createdAt <= (prefs['clearedAt'] as int? ?? 0)) {
+        break;
+      }
+      cursor = rows.first;
+    }
+    return results.take(100).toList();
+  }
+
   Stream<List<T>> _combine<T>(List<Stream<T>> streams) =>
       streams.isEmpty ? Stream.value(<T>[]) : Rx.combineLatestList(streams);
 
@@ -201,15 +284,31 @@ class ChatRepository implements ChatApi {
     final presence = peer == null
         ? Stream.value(const ChatPresence(false, null))
         : watchPresence(peer);
-    return Rx.combineLatest2(_recent(id, 1), presence, (rows, p) {
-      final last = rows.lastOrNull;
+    final timeline =
+        Rx.combineLatest2(_recent(id, 30), value('chatPrefs/$uid/$id'), (
+          rows,
+          raw,
+        ) {
+          final pref = fields(raw);
+          return (visible(rows, pref), pref);
+        }).asyncMap((page) async {
+          _check();
+          await cache.saveMessages(uid, id, page.$1, snapshot: true);
+          return page;
+        });
+    return Rx.combineLatest2(timeline, presence, (page, p) {
+      final pref = page.$2;
+      final last = page.$1.lastOrNull;
       return ChatSummary(
         id: id,
-        title: title,
+        title: pref['nickname'] as String? ?? title,
+        archived: pref['archived'] == true,
+        pinned: pref['pinned'] == true,
+        lastSender: last?.senderId,
         peerUid: peer,
         avatar: avatar,
         last: last?.content ?? '',
-        time: last?.createdAt ?? 0,
+        time: last?.createdAt ?? (pref.containsKey('clearedAt') ? -1 : 0),
         online: p.online,
       );
     });
@@ -252,6 +351,12 @@ class ChatRepository implements ChatApi {
     if (uid != this.uid) {
       throw const ChatFailure('Chỉ xem được hội thoại của chính mình.');
     }
+    return _conversations;
+  }
+
+  late final Stream<List<ChatSummary>> _conversations = _watchInbox()
+      .shareReplay(maxSize: 1);
+  Stream<List<ChatSummary>> _watchInbox() {
     return connection.switchMap((connected) {
       if (!connected) return Stream.fromFuture(cache.summaries(uid));
       final direct = value('userDirectChats/$uid').switchMap(
@@ -260,8 +365,9 @@ class ChatRepository implements ChatApi {
       return Rx.combineLatest2(
         direct,
         _rooms(),
-        (d, g) => [...d, ...g]
+        (d, g) => ([...d, ...g]..removeWhere((r) => r.time < 0))
           ..sort((a, b) {
+            if (a.pinned != b.pinned) return a.pinned ? -1 : 1;
             final t = b.time.compareTo(a.time);
             return t == 0 ? a.id.compareTo(b.id) : t;
           }),

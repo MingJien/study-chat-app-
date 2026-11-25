@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'community_feed.dart';
+
 import '../features/realtime_chat/data/chat_repository.dart';
 import '../features/realtime_chat/domain/chat.dart';
 import '../features/realtime_chat/presentation/chat_widgets.dart';
@@ -41,6 +43,8 @@ class _ChatHomeState extends State<ChatHome> {
         ],
       ),
       const SizedBox(height: 24),
+      CommunityFeed(widget.repo),
+      const SizedBox(height: 24),
       Text('Hội thoại gần đây', style: Theme.of(context).textTheme.titleLarge),
       StreamBuilder(
         stream: rows,
@@ -54,7 +58,7 @@ class _ChatHomeState extends State<ChatHome> {
           }
           return Column(
             children: [
-              for (final r in s.requireData.take(5))
+              for (final r in s.requireData.where((r) => !r.archived).take(5))
                 ListTile(
                   leading: ChatAvatar(
                     r.title,

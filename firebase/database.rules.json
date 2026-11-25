@@ -25,12 +25,15 @@
       ".read": "auth != null",
       "$roomId": {
         ".write": "auth != null && !data.exists() && $roomId.beginsWith('room_') && newData.child('ownerId').val() == auth.uid",
-        ".validate": "newData.hasChildren(['roomId','roomName','subject','ownerId','createdAt']) && newData.child('roomId').val() == $roomId && newData.child('roomName').isString() && newData.child('roomName').val().length > 0 && newData.child('roomName').val().length <= 60 && newData.child('createdAt').val() == now",
+        ".validate": "newData.hasChildren(['roomId','roomName','subject','ownerId','createdAt']) && newData.child('roomId').val() == $roomId && newData.child('roomName').isString() && newData.child('roomName').val().length > 0 && newData.child('roomName').val().length <= 60 && (data.exists() || newData.child('createdAt').val() == now)",
         "subject": {
           ".validate": "newData.isString() && newData.val().length <= 60"
         },
         "description": {
           ".validate": "newData.isString() && newData.val().length <= 200"
+        },
+        "roomName": {
+          ".write": "auth != null && data.parent().child('ownerId').val() == auth.uid && newData.exists()"
         }
       }
     },
@@ -82,7 +85,7 @@
         ".read": "auth != null && (((root.child('directChats').child($cid).child('first').val() == auth.uid || root.child('directChats').child($cid).child('second').val() == auth.uid)) || ($cid.beginsWith('room_') && root.child('roomMembers').child($cid).child(auth.uid).exists())) && query.orderByChild == 'createdAt' && query.limitToLast != null && query.limitToLast <= 30",
         "$mid": {
           ".read": "auth != null && (((root.child('directChats').child($cid).child('first').val() == auth.uid || root.child('directChats').child($cid).child('second').val() == auth.uid)) || ($cid.beginsWith('room_') && root.child('roomMembers').child($cid).child(auth.uid).exists()))",
-          ".write": "auth != null && (((root.child('directChats').child($cid).child('first').val() == auth.uid || root.child('directChats').child($cid).child('second').val() == auth.uid)) || ($cid.beginsWith('room_') && root.child('roomMembers').child($cid).child(auth.uid).exists())) && !data.exists() && newData.exists()",
+          ".write": "auth != null && (((root.child('directChats').child($cid).child('first').val() == auth.uid || root.child('directChats').child($cid).child('second').val() == auth.uid)) || ($cid.beginsWith('room_') && root.child('roomMembers').child($cid).child(auth.uid).exists())) && newData.exists() && ((!data.exists() && !newData.child('recalled').exists()) || (data.child('senderId').val() == auth.uid && !data.child('recalled').exists() && newData.child('recalled').val() == true && newData.child('createdAt').val() == data.child('createdAt').val() && newData.child('content').val() == 'Tin nhắn đã thu hồi' && !newData.child('kind').exists() && !newData.child('replyTo').exists()))",
           ".validate": "newData.hasChildren(['senderId','content','createdAt'])",
           "senderId": {
             ".validate": "newData.val() == auth.uid"
@@ -91,10 +94,19 @@
             ".validate": "newData.isString() && newData.val().length <= 500 && newData.val().replace(' ', '').replace('\\t', '').replace('\\r', '').replace('\\n', '').replace(' ', '').length > 0"
           },
           "createdAt": {
-            ".validate": "newData.val() == now"
+            ".validate": "newData.val() == now || (data.exists() && newData.val() == data.val())"
           },
           "$other": {
             ".validate": false
+          },
+          "recalled": {
+            ".validate": "newData.val() == true && data.parent().exists()"
+          },
+          "replyTo": {
+            ".validate": "newData.isString() && root.child('messages').child($cid).child(newData.val()).exists()"
+          },
+          "kind": {
+            ".validate": "newData.val() == 'question' || newData.val() == 'sticker' || newData.val() == 'file' || newData.val() == 'image'"
           }
         }
       }
@@ -111,6 +123,134 @@
         "lastSeen": {
           ".write": "auth != null && auth.uid == $uid",
           ".validate": "newData.val() == now"
+        }
+      }
+    },
+    "attachments": {
+      "$cid": {
+        "$mid": {
+          ".read": "auth != null && (((root.child('directChats').child($cid).child('first').val() == auth.uid || root.child('directChats').child($cid).child('second').val() == auth.uid)) || ($cid.beginsWith('room_') && root.child('roomMembers').child($cid).child(auth.uid).exists())) && root.child('messages').child($cid).child($mid).exists() && !root.child('messages').child($cid).child($mid).child('recalled').exists()",
+          ".write": "auth != null && (((root.child('directChats').child($cid).child('first').val() == auth.uid || root.child('directChats').child($cid).child('second').val() == auth.uid)) || ($cid.beginsWith('room_') && root.child('roomMembers').child($cid).child(auth.uid).exists())) && ((!newData.exists() && data.exists() && root.child('messages').child($cid).child($mid).child('senderId').val() == auth.uid) || (!data.exists() && newData.parent().parent().parent().child('messages').child($cid).child($mid).child('senderId').val() == auth.uid && (newData.parent().parent().parent().child('messages').child($cid).child($mid).child('kind').val() == 'file' || newData.parent().parent().parent().child('messages').child($cid).child($mid).child('kind').val() == 'image')))",
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 1398104"
+        }
+      }
+    },
+    "interactions": {
+      "$cid": {
+        ".read": "auth != null && (((root.child('directChats').child($cid).child('first').val() == auth.uid || root.child('directChats').child($cid).child('second').val() == auth.uid)) || ($cid.beginsWith('room_') && root.child('roomMembers').child($cid).child(auth.uid).exists()))",
+        "$mid": {
+          "reactions": {
+            "$uid": {
+              ".write": "auth != null && (((root.child('directChats').child($cid).child('first').val() == auth.uid || root.child('directChats').child($cid).child('second').val() == auth.uid)) || ($cid.beginsWith('room_') && root.child('roomMembers').child($cid).child(auth.uid).exists())) && root.child('messages').child($cid).child($mid).exists() && !root.child('messages').child($cid).child($mid).child('recalled').exists() && auth.uid == $uid",
+              ".validate": "newData.val() == '❤️' || newData.val() == '👍' || newData.val() == '💡' || newData.val() == '🎉'"
+            }
+          },
+          "pinned": {
+            ".write": "auth != null && (((root.child('directChats').child($cid).child('first').val() == auth.uid || root.child('directChats').child($cid).child('second').val() == auth.uid)) || ($cid.beginsWith('room_') && root.child('roomMembers').child($cid).child(auth.uid).exists())) && root.child('messages').child($cid).child($mid).exists() && !root.child('messages').child($cid).child($mid).child('recalled').exists()",
+            ".validate": "newData.val() == true"
+          },
+          "answer": {
+            ".write": "auth != null && (((root.child('directChats').child($cid).child('first').val() == auth.uid || root.child('directChats').child($cid).child('second').val() == auth.uid)) || ($cid.beginsWith('room_') && root.child('roomMembers').child($cid).child(auth.uid).exists())) && root.child('messages').child($cid).child($mid).exists() && !root.child('messages').child($cid).child($mid).child('recalled').exists() && root.child('messages').child($cid).child($mid).child('kind').val() == 'question' && root.child('messages').child($cid).child($mid).child('senderId').val() == auth.uid",
+            ".validate": "newData.isString() && root.child('messages').child($cid).child(newData.val()).child('replyTo').val() == $mid && !root.child('messages').child($cid).child(newData.val()).child('recalled').exists()"
+          }
+        }
+      }
+    },
+    "chatPrefs": {
+      "$uid": {
+        ".read": "auth != null && auth.uid == $uid",
+        "$cid": {
+          ".write": "auth != null && auth.uid == $uid",
+          "pinned": {
+            ".validate": "newData.val() == true"
+          },
+          "archived": {
+            ".validate": "newData.val() == true"
+          },
+          "clearedAt": {
+            ".validate": "newData.val() == now"
+          },
+          "nickname": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 50"
+          },
+          "selfName": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 50"
+          },
+          "hidden": {
+            "$mid": {
+              ".validate": "newData.val() == true"
+            }
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    },
+    "stickers": {
+      "$uid": {
+        ".read": "auth != null && auth.uid == $uid",
+        "$sid": {
+          ".write": "auth != null && auth.uid == $uid",
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 40"
+        }
+      }
+    },
+    "contacts": {
+      "$uid": {
+        ".read": "auth != null && auth.uid == $uid",
+        "$peer": {
+          ".write": "auth != null && $uid != $peer && root.child('profiles').child($uid).exists() && root.child('profiles').child($peer).exists() && (auth.uid == $uid || auth.uid == $peer) && ((!newData.exists() && !newData.parent().parent().child($peer).child($uid).exists()) || (!data.exists() && ((auth.uid == $uid && newData.val() == 'sent' && newData.parent().parent().child($peer).child($uid).val() == 'received') || (auth.uid == $peer && newData.val() == 'received' && newData.parent().parent().child($peer).child($uid).val() == 'sent'))) || (newData.val() == 'friends' && newData.parent().parent().child($peer).child($uid).val() == 'friends' && ((auth.uid == $uid && data.val() == 'received') || (auth.uid == $peer && data.val() == 'sent'))))"
+        }
+      }
+    },
+    "posts": {
+      ".indexOn": [
+        "createdAt"
+      ],
+      ".read": "auth != null && query.orderByChild == 'createdAt' && query.limitToLast != null && query.limitToLast <= 50",
+      "$id": {
+        ".write": "auth != null && ((!data.exists() && newData.child('author').val() == auth.uid) || (data.child('author').val() == auth.uid && !newData.exists()))",
+        ".validate": "newData.hasChildren(['author','text','style','createdAt'])",
+        "author": {
+          ".validate": "newData.val() == auth.uid"
+        },
+        "text": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 1000"
+        },
+        "style": {
+          ".validate": "newData.val() == 'note' || newData.val() == 'question' || newData.val() == 'checklist'"
+        },
+        "createdAt": {
+          ".validate": "newData.val() == now"
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    },
+    "stories": {
+      ".indexOn": [
+        "createdAt"
+      ],
+      ".read": "auth != null && query.orderByChild == 'createdAt' && query.limitToLast != null && query.limitToLast <= 50 && query.startAt != null && query.startAt >= now - 86460000",
+      "$id": {
+        ".write": "auth != null && ((!data.exists() && newData.child('author').val() == auth.uid) || (data.child('author').val() == auth.uid && !newData.exists()))",
+        ".validate": "newData.hasChildren(['author','text','style','createdAt'])",
+        "author": {
+          ".validate": "newData.val() == auth.uid"
+        },
+        "text": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 1000"
+        },
+        "style": {
+          ".validate": "newData.val() == 'note' || newData.val() == 'question' || newData.val() == 'checklist'"
+        },
+        "createdAt": {
+          ".validate": "newData.val() == now"
+        },
+        "$other": {
+          ".validate": false
         }
       }
     }

@@ -9,16 +9,29 @@ class ChatCache {
   Future<Database> get _db => _database ??= factory.openDatabase(
     'study_chat_tv2.db',
     options: OpenDatabaseOptions(
-      version: 1,
+      version: 2,
+      onUpgrade: (db, old, _) async {
+        await db.execute('ALTER TABLE messages ADD COLUMN kind TEXT');
+        await db.execute('ALTER TABLE messages ADD COLUMN reply_to TEXT');
+        await db.execute(
+          'ALTER TABLE messages ADD COLUMN recalled INTEGER DEFAULT 0',
+        );
+        await db.execute(
+          'ALTER TABLE conversations ADD COLUMN archived INTEGER DEFAULT 0',
+        );
+        await db.execute(
+          'ALTER TABLE conversations ADD COLUMN pinned INTEGER DEFAULT 0',
+        );
+      },
       onCreate: (db, _) async {
         await db.execute(
-          'CREATE TABLE messages(owner_uid TEXT NOT NULL, conversation_id TEXT NOT NULL, message_id TEXT NOT NULL, sender_id TEXT NOT NULL, content TEXT NOT NULL, created_at INTEGER NOT NULL, PRIMARY KEY(owner_uid, message_id))',
+          'CREATE TABLE messages(owner_uid TEXT NOT NULL, conversation_id TEXT NOT NULL, message_id TEXT NOT NULL, kind TEXT, reply_to TEXT, recalled INTEGER DEFAULT 0,sender_id TEXT NOT NULL, content TEXT NOT NULL, created_at INTEGER NOT NULL, PRIMARY KEY(owner_uid, message_id))',
         );
         await db.execute(
           'CREATE INDEX recent ON messages(owner_uid, conversation_id, created_at DESC, message_id DESC)',
         );
         await db.execute(
-          'CREATE TABLE conversations(owner_uid TEXT NOT NULL, conversation_id TEXT NOT NULL, title TEXT NOT NULL, peer_uid TEXT, avatar TEXT NOT NULL, last TEXT NOT NULL, time INTEGER NOT NULL, PRIMARY KEY(owner_uid, conversation_id))',
+          'CREATE TABLE conversations(owner_uid TEXT NOT NULL, conversation_id TEXT NOT NULL, archived INTEGER DEFAULT 0,pinned INTEGER DEFAULT 0,title TEXT NOT NULL, peer_uid TEXT, avatar TEXT NOT NULL, last TEXT NOT NULL, time INTEGER NOT NULL, PRIMARY KEY(owner_uid, conversation_id))',
         );
       },
     ),
@@ -27,17 +40,28 @@ class ChatCache {
   Future<void> saveMessages(
     String uid,
     String cid,
-    List<ChatMessage> messages,
-  ) async {
+    List<ChatMessage> messages, {
+    bool snapshot = false,
+  }) async {
     final db = await _db;
     await db.transaction((tx) async {
       final batch = tx.batch();
+      if (snapshot) {
+        batch.delete(
+          'messages',
+          where: 'owner_uid=? AND conversation_id=?',
+          whereArgs: [uid, cid],
+        );
+      }
       for (final m in messages) {
         batch.insert('messages', {
           'owner_uid': uid,
           'conversation_id': cid,
           'message_id': m.id,
           'sender_id': m.senderId,
+          'kind': m.kind,
+          'reply_to': m.replyTo,
+          'recalled': m.recalled ? 1 : 0,
           'content': m.content,
           'created_at': m.createdAt,
         }, conflictAlgorithm: ConflictAlgorithm.replace);
@@ -64,6 +88,9 @@ class ChatCache {
           r['sender_id'] as String,
           r['content'] as String,
           r['created_at'] as int,
+          kind: r['kind'] as String?,
+          replyTo: r['reply_to'] as String?,
+          recalled: r['recalled'] == 1,
         ),
     ];
   }
@@ -88,6 +115,8 @@ class ChatCache {
           'owner_uid': uid,
           'conversation_id': r.id,
           'title': r.title,
+          'archived': r.archived ? 1 : 0,
+          'pinned': r.pinned ? 1 : 0,
           'peer_uid': r.peerUid,
           'avatar': r.avatar,
           'last': r.last,
@@ -110,6 +139,8 @@ class ChatCache {
         ChatSummary(
           id: r['conversation_id'] as String,
           title: r['title'] as String,
+          archived: r['archived'] == 1,
+          pinned: r['pinned'] == 1,
           peerUid: r['peer_uid'] as String?,
           avatar: r['avatar'] as String,
           last: r['last'] as String,

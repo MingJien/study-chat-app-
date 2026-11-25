@@ -1,9 +1,17 @@
+import 'dart:convert';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+
+import '../../../app/chat_directory.dart' show askText;
+
 import 'package:rxdart/rxdart.dart';
 
 import '../data/chat_repository.dart';
 import '../domain/chat.dart';
 import 'chat_widgets.dart';
+
+part 'chat_tools.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen(this.repo, this.chat, {super.key});
@@ -19,6 +27,10 @@ class _ChatScreenState extends State<ChatScreen> {
   late final Stream<Object?>? notice;
   late final Stream<ChatPresence>? presence;
   final profiles = <String, Stream<Object?>>{};
+  late final details = repo.value('interactions/${chat.id}');
+  late final preferences = repo.value('chatPrefs/${repo.uid}/${chat.id}');
+  ChatMessage? replying;
+  bool question = false;
   bool sending = false, showJump = false;
   String? error, lastId, retryId, retryText;
   ChatRepository get repo => widget.repo;
@@ -40,6 +52,7 @@ class _ChatScreenState extends State<ChatScreen> {
     super.dispose();
   }
 
+  void refresh(VoidCallback change) => setState(change);
   void jump() {
     if (scroll.hasClients) scroll.jumpTo(scroll.position.maxScrollExtent);
     if (showJump) setState(() => showJump = false);
@@ -76,9 +89,17 @@ class _ChatScreenState extends State<ChatScreen> {
         sending = true;
         error = null;
       });
-      await repo.sendMessage(chat.id, content, messageId: retryId);
+      await repo.sendMessage(
+        chat.id,
+        content,
+        messageId: retryId,
+        kind: question ? 'question' : null,
+        replyTo: replying?.id,
+      );
       if (!mounted) return;
       input.clear();
+      replying = null;
+      question = false;
       retryId = null;
       retryText = null;
     } catch (e) {
@@ -89,11 +110,39 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => StreamBuilder(
+    stream: details,
+    builder: (_, d) => StreamBuilder(
+      stream: preferences,
+      builder: (_, p) => buildChat(context, fields(d.data), fields(p.data)),
+    ),
+  );
+  Widget buildChat(
+    BuildContext context,
+    Map<String, dynamic> meta,
+    Map<String, dynamic> prefs,
+  ) {
     final colors = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
         titleSpacing: 0,
+        actions: [
+          PopupMenuButton<String>(
+            tooltip: 'Công cụ hội thoại',
+            onSelected: (v) => perform(() => chatTool(v, meta, prefs)),
+            itemBuilder: (_) => [
+              for (final (key, label) in [
+                ('search', 'Tìm tin nhắn'),
+                ('pins', 'Tin nhắn đã ghim'),
+                ('study', 'Sổ đáp án'),
+                ('nick', 'Biệt danh đối phương / phòng'),
+                ('self', 'Biệt danh của tôi'),
+                if (chat.peerUid != null) ('profile', 'Xem hồ sơ'),
+              ])
+                PopupMenuItem(value: key, child: Text(label)),
+            ],
+          ),
+        ],
         title: Row(
           children: [
             ChatAvatar(
@@ -107,7 +156,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    chat.title,
+                    prefs['nickname'] as String? ?? chat.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.titleMedium
@@ -226,23 +275,103 @@ class _ChatScreenState extends State<ChatScreen> {
                                             i == 0 ||
                                             data.messages[i - 1].senderId !=
                                                 m.senderId;
-                                        return MessageBubble(
-                                          message: m,
-                                          own: own,
-                                          showAuthor: first,
-                                          profile: first && !cached
-                                              ? stream
-                                              : null,
-                                          fallback: own
-                                              ? 'Bạn'
-                                              : chat.peerUid == m.senderId
-                                              ? chat.title
-                                              : 'Bạn học',
-                                          onProfile: () => Navigator.pushNamed(
-                                            context,
-                                            '/profile',
-                                            arguments: m.senderId,
-                                          ),
+                                        final info = fields(meta[m.id]);
+                                        final target = data.messages
+                                            .where((row) => row.id == m.replyTo)
+                                            .firstOrNull;
+                                        return Column(
+                                          crossAxisAlignment: own
+                                              ? CrossAxisAlignment.end
+                                              : CrossAxisAlignment.start,
+                                          children: [
+                                            if (m.replyTo != null)
+                                              Text(
+                                                '↳ ${target?.content ?? "Trả lời tin nhắn trước"}',
+                                                maxLines: 2,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            if (m.kind == 'question')
+                                              Text(
+                                                info['answer'] == null
+                                                    ? '❓ Câu hỏi đang mở'
+                                                    : '✅ Đã chốt đáp án',
+                                              ),
+                                            if (info['pinned'] == true &&
+                                                !m.recalled)
+                                              const Text('📌 Đã ghim'),
+                                            MessageBubble(
+                                              message: m,
+                                              nickname:
+                                                  (own
+                                                          ? prefs['selfName']
+                                                          : (m.senderId ==
+                                                                    chat.peerUid
+                                                                ? prefs['nickname']
+                                                                : null))
+                                                      as String?,
+                                              own: own,
+                                              showAuthor: first,
+                                              profile: first && !cached
+                                                  ? stream
+                                                  : null,
+                                              fallback: own
+                                                  ? 'Bạn'
+                                                  : chat.peerUid == m.senderId
+                                                  ? chat.title
+                                                  : 'Bạn học',
+                                              onProfile: () =>
+                                                  Navigator.pushNamed(
+                                                    context,
+                                                    '/profile',
+                                                    arguments: m.senderId,
+                                                  ),
+                                            ),
+                                            Wrap(
+                                              crossAxisAlignment:
+                                                  WrapCrossAlignment.center,
+                                              children: [
+                                                if (!m.recalled)
+                                                  for (final emoji in fields(
+                                                    info['reactions'],
+                                                  ).values.toSet())
+                                                    Text(
+                                                      '$emoji ${fields(info['reactions']).values.where((e) => e == emoji).length} ',
+                                                    ),
+                                                if (!cached &&
+                                                    !m.recalled &&
+                                                    (m.kind == 'file' ||
+                                                        m.kind == 'image'))
+                                                  TextButton.icon(
+                                                    onPressed: () => perform(
+                                                      () => openAttachment(m),
+                                                    ),
+                                                    icon: const Icon(
+                                                      Icons.download,
+                                                    ),
+                                                    label: Text(
+                                                      m.kind == 'image'
+                                                          ? 'Xem ảnh'
+                                                          : 'Tải tệp',
+                                                    ),
+                                                  ),
+                                                IconButton(
+                                                  tooltip: 'Tùy chọn tin nhắn',
+                                                  icon: const Icon(
+                                                    Icons.more_horiz,
+                                                  ),
+                                                  onPressed: cached
+                                                      ? null
+                                                      : () => perform(
+                                                          () => messageTools(
+                                                            m,
+                                                            info,
+                                                            data.messages,
+                                                          ),
+                                                        ),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
                                         );
                                       },
                                     ),
@@ -263,6 +392,24 @@ class _ChatScreenState extends State<ChatScreen> {
                               },
                             ),
                     ),
+                    if (replying != null || question)
+                      ListTile(
+                        dense: true,
+                        title: Text(
+                          replying != null
+                              ? '↳ ${replying!.content}'
+                              : '❓ Đặt câu hỏi cho sổ đáp án',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => setState(() {
+                            replying = null;
+                            question = false;
+                          }),
+                        ),
+                      ),
                     if (error != null)
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -276,6 +423,26 @@ class _ChatScreenState extends State<ChatScreen> {
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
+                          PopupMenuButton<String>(
+                            enabled: enabled,
+                            tooltip: 'Thêm vào tin nhắn',
+                            icon: const Icon(Icons.add_circle_outline),
+                            onSelected: (v) => perform(() => composeTool(v)),
+                            itemBuilder: (_) => const [
+                              PopupMenuItem(
+                                value: 'question',
+                                child: Text('Đặt câu hỏi học tập'),
+                              ),
+                              PopupMenuItem(
+                                value: 'stickers',
+                                child: Text('Bộ sticker'),
+                              ),
+                              PopupMenuItem(
+                                value: 'file',
+                                child: Text('Gửi tệp hoặc ảnh · tối đa 1 MiB'),
+                              ),
+                            ],
+                          ),
                           Expanded(
                             child: TextField(
                               controller: input,
@@ -331,11 +498,13 @@ class MessageBubble extends StatelessWidget {
     required this.profile,
     required this.fallback,
     required this.onProfile,
+    this.nickname,
   });
   final ChatMessage message;
   final bool own, showAuthor;
   final Stream<Object?>? profile;
   final String fallback;
+  final String? nickname;
   final VoidCallback onProfile;
   @override
   Widget build(BuildContext context) {
@@ -362,7 +531,7 @@ class MessageBubble extends StatelessWidget {
                       name,
                       avatar: p['avatarId'] as String? ?? '',
                     ),
-                    label: Text(own ? 'Bạn' : name),
+                    label: Text(nickname ?? (own ? 'Bạn' : name)),
                   );
                 },
               ),
@@ -378,7 +547,12 @@ class MessageBubble extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(message.content),
+                  Text(
+                    message.content,
+                    style: message.kind == 'sticker'
+                        ? Theme.of(context).textTheme.headlineMedium
+                        : null,
+                  ),
                   const SizedBox(height: 3),
                   Text(
                     timeLabel(message.createdAt, full: true),
