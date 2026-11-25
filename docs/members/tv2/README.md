@@ -4,6 +4,20 @@ Nhánh giao bài và cập nhật của TV2 là `tv2`. Mở thư mục gốc tro
 
 ## Chạy và đăng nhập
 
+Ở màn hình đăng nhập, chọn **Minh An**, **Hải Bình** hoặc **Lan Chi** để vào thẳng tài khoản demo. F5 tự tạo ba tài khoản trong Firebase Emulator và giữ UID của tài khoản đã tồn tại. Mở thêm cửa sổ InPrivate để đăng nhập vai thứ hai. Các nút demo chỉ xuất hiện ở bản build bật `FIREBASE_EMULATOR`.
+
+### Thử chức năng mới
+
+1. Vào **Bạn học**, tìm theo tên và mở hồ sơ để gửi lời mời. Người nhận chọn **Bạn học → Lời mời → Chấp nhận kết bạn**. Có thể sao chép liên kết ở hồ sơ cá nhân và gửi qua kênh mình chọn. Với bản F5, liên kết localhost dùng trên cùng máy. **Mở mã hoặc link mời** cũng nhận mã tài khoản để mở hồ sơ trên thiết bị cùng backend.
+2. Trong hội thoại, nhấn **+** để chọn sticker, tạo sticker ảnh hoặc gửi tệp. Giới hạn tệp là 1 MiB, sticker ảnh là 128 KiB. Bấm ảnh để xem và tải. Menu dưới mỗi tin cho phép trả lời, thả cảm xúc, ghim, xóa ở phía mình hoặc thu hồi tin do mình gửi.
+3. Chọn **+ → Đặt câu hỏi học tập**. Người khác chọn **Trả lời** trên câu hỏi đó. Người đặt câu hỏi mở menu của tin trả lời và chọn **Chốt làm đáp án**. Mở **Công cụ hội thoại → Sổ đáp án** để tra cứu hoặc **Thẻ tự ôn** để lật từng câu và tự đánh giá.
+4. Dùng menu của một hàng trong **Tin nhắn** để ghim, lưu trữ hoặc xóa lịch sử cá nhân. Sau khi xóa lịch sử, tin mới làm hội thoại xuất hiện lại. Các biệt danh chỉ hiển thị cho tài khoản đã đặt. Tìm tin nhắn trả tối đa 100 kết quả, khi ngoại tuyến chỉ tra trong 30 tin gần nhất đã đồng bộ trên thiết bị.
+5. **Trang chủ** có bài đăng và story 24 giờ cho người dùng đã đăng nhập. Chọn ghi chú, câu hỏi hoặc danh sách ôn tập, thêm định dạng chữ và ảnh tối đa 128 KiB. Chủ bài có thể xóa bài. **Hồ sơ của tôi** cho phép sửa tên, lớp và giới thiệu.
+
+### Cấu hình Android khi phát hành
+
+Bản CI chạy với Firebase Emulator. Đối với bản phát hành, nhóm cần Firebase project riêng, bật xác thực, triển khai Rules đã kiểm thử và truyền cấu hình `FIREBASE_*` cùng `FIREBASE_EMULATOR=false` vào build. Gradle đọc khóa ký riêng từ `android/key.properties` qua các trường `storeFile`, `storePassword`, `keyAlias`, `keyPassword`. File này và keystore nằm ngoài Git. Khi chưa cấp khóa riêng, APK của CI dùng khóa demo.
+
 - Cần Python 3.9+, Node.js 22+ có `npx`, Java 21+ và Edge. Lần đầu cần Internet để lấy Firebase CLI và Database Emulator. Các lần sau dùng cache của công cụ. Java của Database Emulator có giới hạn heap mặc định 192 MB.
 - Có thể chạy `python tools/preview.py` trong terminal VS Code rồi mở <http://127.0.0.1:8765>. Cổng Auth là 9099, Database là 9000 và Emulator Hub là 4400. Khi đóng demo bằng Ctrl+C, CLI xuất dữ liệu vào `.local-data/firebase` để nhập lại lần sau.
 - Chọn **Đăng ký**, nhập email thử nghiệm, mật khẩu ít nhất sáu ký tự và tên hiển thị. Tạo tài khoản thứ hai trong cửa sổ InPrivate hoặc một hồ sơ trình duyệt khác. Hai tab thường dùng cùng phiên Auth.

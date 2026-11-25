@@ -29,6 +29,8 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> {
   late int tab = widget.initialTab;
   Map<String, int>? seen;
+  ChatSummary? notification;
+  Timer? dismissNotice;
   late final StreamSubscription<List<ChatSummary>> notices;
   @override
   void initState() {
@@ -53,20 +55,11 @@ class _AppShellState extends State<AppShell> {
             r.lastSender != null &&
             r.lastSender != widget.repo.uid &&
             !r.archived) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Tin mới từ ${r.title}'),
-              duration: const Duration(seconds: 2),
-              action: SnackBarAction(
-                label: 'Mở',
-                onPressed: () => Navigator.pushNamed(
-                  context,
-                  '/chat',
-                  arguments: ChatArgs.existing(r),
-                ),
-              ),
-            ),
-          );
+          dismissNotice?.cancel();
+          setState(() => notification = r);
+          dismissNotice = Timer(const Duration(seconds: 4), () {
+            if (mounted) setState(() => notification = null);
+          });
           break;
         }
       }
@@ -75,6 +68,7 @@ class _AppShellState extends State<AppShell> {
 
   @override
   void dispose() {
+    dismissNotice?.cancel();
     notices.cancel();
     super.dispose();
   }
@@ -126,6 +120,25 @@ class _AppShellState extends State<AppShell> {
             constraints: const BoxConstraints(maxWidth: 880),
             child: Column(
               children: [
+                if (notification case final message?)
+                  ListTile(
+                    dense: true,
+                    leading: const Icon(Icons.notifications_active_outlined),
+                    title: Text('Tin mới từ ${message.title}', maxLines: 1),
+                    onTap: () {
+                      setState(() => notification = null);
+                      Navigator.pushNamed(
+                        context,
+                        '/chat',
+                        arguments: ChatArgs.existing(message),
+                      );
+                    },
+                    trailing: IconButton(
+                      tooltip: 'Đóng thông báo',
+                      icon: const Icon(Icons.close),
+                      onPressed: () => setState(() => notification = null),
+                    ),
+                  ),
                 StreamBuilder(
                   stream: repo.connection,
                   builder: (_, s) => s.data == false
