@@ -135,6 +135,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 ('search', 'Tìm tin nhắn'),
                 ('pins', 'Tin nhắn đã ghim'),
                 ('study', 'Sổ đáp án'),
+                ('review', 'Thẻ tự ôn'),
                 ('nick', 'Biệt danh đối phương / phòng'),
                 ('self', 'Biệt danh của tôi'),
                 if (chat.peerUid != null) ('profile', 'Xem hồ sơ'),
@@ -299,6 +300,18 @@ class _ChatScreenState extends State<ChatScreen> {
                                             if (info['pinned'] == true &&
                                                 !m.recalled)
                                               const Text('📌 Đã ghim'),
+                                            if (!cached &&
+                                                m.kind == 'image' &&
+                                                !m.recalled)
+                                              _ImagePreview(
+                                                key: ValueKey(m.id),
+                                                repo: repo,
+                                                cid: chat.id,
+                                                message: m,
+                                                onTap: () => perform(
+                                                  () => openAttachment(m),
+                                                ),
+                                              ),
                                             MessageBubble(
                                               message: m,
                                               nickname:

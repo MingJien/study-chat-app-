@@ -192,7 +192,13 @@
         ".read": "auth != null && auth.uid == $uid",
         "$sid": {
           ".write": "auth != null && auth.uid == $uid",
-          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 40"
+          ".validate": "(newData.isString() && newData.val().length > 0 && newData.val().length <= 40) || (newData.child('label').isString() && newData.child('label').val().length > 0 && newData.child('label').val().length <= 80)",
+          "label": {
+            ".validate": "newData.isString()"
+          },
+          "$other": {
+            ".validate": false
+          }
         }
       }
     },
@@ -226,17 +232,22 @@
         },
         "$other": {
           ".validate": false
+        },
+        "hasImage": {
+          ".validate": "newData.val() == true"
+        },
+        "bold": {
+          ".validate": "newData.val() == true"
+        },
+        "italic": {
+          ".validate": "newData.val() == true"
         }
       }
     },
     "stories": {
-      ".indexOn": [
-        "createdAt"
-      ],
-      ".read": "auth != null && query.orderByChild == 'createdAt' && query.limitToLast != null && query.limitToLast <= 50 && query.startAt != null && query.startAt >= now - 86460000",
       "$id": {
         ".write": "auth != null && ((!data.exists() && newData.child('author').val() == auth.uid) || (data.child('author').val() == auth.uid && !newData.exists()))",
-        ".validate": "newData.hasChildren(['author','text','style','createdAt'])",
+        ".validate": "newData.hasChildren(['author','text','style','createdAt']) && newData.parent().parent().child('storyIndex').child($id).val() == now",
         "author": {
           ".validate": "newData.val() == auth.uid"
         },
@@ -251,6 +262,42 @@
         },
         "$other": {
           ".validate": false
+        },
+        ".read": "auth != null && data.child('createdAt').val() > now - 86400000",
+        "hasImage": {
+          ".validate": "newData.val() == true"
+        },
+        "bold": {
+          ".validate": "newData.val() == true"
+        },
+        "italic": {
+          ".validate": "newData.val() == true"
+        }
+      }
+    },
+    "storyIndex": {
+      ".indexOn": ".value",
+      ".read": "auth != null && query.orderByValue && query.limitToLast != null && query.limitToLast <= 50",
+      "$id": {
+        ".write": "auth != null && ((!data.exists() && newData.parent().parent().child('stories').child($id).child('author').val() == auth.uid) || (!newData.exists() && root.child('stories').child($id).child('author').val() == auth.uid))",
+        ".validate": "newData.val() == now"
+      }
+    },
+    "stickerArt": {
+      "$uid": {
+        "$sid": {
+          ".read": "auth != null && auth.uid == $uid",
+          ".write": "auth != null && auth.uid == $uid",
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 174764"
+        }
+      }
+    },
+    "feedMedia": {
+      "$collection": {
+        "$id": {
+          ".read": "auth != null && ($collection == 'stories' || $collection == 'posts') && root.child($collection).child($id).child('hasImage').val() == true && ($collection == 'posts' || root.child($collection).child($id).child('createdAt').val() > now - 86400000)",
+          ".write": "auth != null && ($collection == 'stories' || $collection == 'posts') && ((!data.exists() && newData.parent().parent().parent().child($collection).child($id).child('author').val() == auth.uid && newData.parent().parent().parent().child($collection).child($id).child('hasImage').val() == true) || (!newData.exists() && root.child($collection).child($id).child('author').val() == auth.uid))",
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 174764"
         }
       }
     }

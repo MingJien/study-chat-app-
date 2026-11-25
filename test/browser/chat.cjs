@@ -110,6 +110,13 @@ async function run() {
     await identity('update',{idToken:b.idToken,displayName:nameB});
     await database(b,'PUT','profiles/'+b.localId,{uid:b.localId,displayName:nameB,avatarId:'avatar_minh'});
     await Promise.all([p.goto(origin),q.goto(origin)]);
+    for (const name of ['Minh An','Hải Bình','Lan Chi']) {
+      await p.getByLabel(name,{exact:true}).or(p.getByText(name,{exact:true})).first().click();
+      await p.getByRole('textbox',{name:'Tìm hội thoại'}).waitFor();
+      await label(p,'Tài khoản').click();
+      await p.getByRole('menuitem',{name:'Đăng xuất'}).click();
+      await label(p,'Đăng nhập').waitFor();
+    }
     await caption(p,'Hai cửa sổ độc lập kết nối cùng Firebase Emulator. Mỗi sinh viên sử dụng một phiên đăng nhập.');
     await label(p,'Chưa có tài khoản? Đăng ký').click();
     await fill(p,'Email sinh viên',emailA); await fill(p,'Mật khẩu',password);

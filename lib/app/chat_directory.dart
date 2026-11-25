@@ -384,12 +384,14 @@ class _PublicProfileState extends State<PublicProfile> {
                   onPressed: () async {
                     await Clipboard.setData(
                       ClipboardData(
-                        text: Uri.base
-                            .replace(
-                              queryParameters: {'invite': widget.uid},
-                              fragment: '',
-                            )
-                            .toString(),
+                        text: !['http', 'https'].contains(Uri.base.scheme)
+                            ? widget.uid
+                            : Uri.base
+                                  .replace(
+                                    queryParameters: {'invite': widget.uid},
+                                    fragment: '',
+                                  )
+                                  .toString(),
                       ),
                     );
                     if (context.mounted) {

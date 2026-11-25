@@ -238,7 +238,11 @@ class ChatRepository implements ChatApi {
     });
   }
 
-  Future<List<ChatMessage>> search(String cid, String text) async {
+  Future<List<ChatMessage>> search(
+    String cid,
+    String text, {
+    String? kind,
+  }) async {
     _check(network: true);
     final prefs = fields(await rest.request(uid, 'GET', 'chatPrefs/$uid/$cid'));
     final results = <ChatMessage>[];
@@ -260,6 +264,7 @@ class ChatRepository implements ChatApi {
         visible(rows, prefs).reversed.where(
           (m) =>
               !m.recalled &&
+              (kind == null || m.kind == kind) &&
               m.content.toLowerCase().contains(text.toLowerCase()),
         ),
       );

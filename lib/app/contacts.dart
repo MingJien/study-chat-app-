@@ -127,6 +127,31 @@ class _ContactsPageState extends State<ContactsPage> {
           onSelectionChanged: (v) => setState(() => tab = v.first),
         ),
       ),
+      if (tab == 0)
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton.icon(
+            icon: const Icon(Icons.link),
+            label: const Text('Mở mã hoặc link mời'),
+            onPressed: () async {
+              final input = await askText(
+                context,
+                'Dán mã hoặc liên kết mời',
+                350,
+              );
+              if (input == null || input.isEmpty || !context.mounted) return;
+              final id =
+                  Uri.tryParse(input)?.queryParameters['invite'] ?? input;
+              if (!RegExp(r'^[a-zA-Z0-9_-]{1,128}$').hasMatch(id)) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Mã mời không hợp lệ.')),
+                );
+                return;
+              }
+              await Navigator.pushNamed(context, '/profile', arguments: id);
+            },
+          ),
+        ),
       Expanded(
         child: tab == 0
             ? ChatDirectory(widget.repo, rooms: false)

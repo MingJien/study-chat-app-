@@ -1,5 +1,54 @@
 part of 'chat_screen.dart';
 
+class _ImagePreview extends StatefulWidget {
+  const _ImagePreview({
+    super.key,
+    required this.repo,
+    required this.cid,
+    required this.message,
+    required this.onTap,
+  });
+  final ChatRepository repo;
+  final String cid;
+  final ChatMessage message;
+  final VoidCallback onTap;
+  @override
+  State<_ImagePreview> createState() => _ImagePreviewState();
+}
+
+class _ImagePreviewState extends State<_ImagePreview> {
+  late final bytes = widget.repo.rest
+      .request(
+        widget.repo.uid,
+        'GET',
+        'attachments/${widget.cid}/${widget.message.id}',
+      )
+      .then((v) => base64Decode(v as String));
+  @override
+  Widget build(BuildContext context) => FutureBuilder(
+    future: bytes,
+    builder: (_, s) {
+      if (!s.hasData) return const SizedBox.shrink();
+      return InkWell(
+        onTap: widget.onTap,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(14),
+          child: Image.memory(
+            s.requireData,
+            semanticLabel: widget.message.content,
+            width: 180,
+            height: 140,
+            fit: BoxFit.contain,
+            cacheWidth: 360,
+            errorBuilder: (_, e, stack) =>
+                const Icon(Icons.broken_image_outlined),
+          ),
+        ),
+      );
+    },
+  );
+}
+
 extension _ChatTools on _ChatScreenState {
   Future<void> perform(Future<void> Function() action) async {
     try {
@@ -56,9 +105,58 @@ extension _ChatTools on _ChatScreenState {
           ...custom.values.whereType<String>(),
         })
           (s, s),
+        for (final entry in custom.entries.where((e) => e.value is Map))
+          ('art:${entry.key}', '🖼 ${fields(entry.value)['label']}'),
         ('+', 'Tạo sticker chữ và emoji'),
+        ('+art', 'Tạo sticker từ ảnh'),
       ]);
       if (choice == null) return;
+      if (choice == '+art' || choice.startsWith('art:')) {
+        String encoded, label;
+        if (choice == '+art') {
+          final file = await FilePicker.pickFile(
+            type: FileType.custom,
+            allowedExtensions: ['png', 'jpg', 'jpeg', 'webp', 'gif'],
+          );
+          if (file == null) return;
+          final size = await file.length();
+          if (size == null || size == 0 || size > 131072) {
+            throw const ChatFailure('Sticker ảnh tối đa 128 KiB.');
+          }
+          encoded = base64Encode(await file.readAsBytes());
+          label = file.name;
+          if (label.length > 80) {
+            throw const ChatFailure('Tên ảnh tối đa 80 ký tự.');
+          }
+          final id = repo.db.ref().push().key!;
+          await repo.rest.request(repo.uid, 'PATCH', '', {
+            'stickers/${repo.uid}/$id': {'label': label},
+            'stickerArt/${repo.uid}/$id': encoded,
+          });
+        } else {
+          final id = choice.substring(4);
+          label = fields(custom[id])['label'] as String;
+          encoded = await repo.rest.request(
+            repo.uid,
+            'GET',
+            'stickerArt/${repo.uid}/$id',
+          ) as String;
+        }
+        await repo.sendMessage(
+          chat.id,
+          label,
+          kind: 'image',
+          attachment: encoded,
+          replyTo: replying?.id,
+        );
+        if (mounted) {
+          refresh(() {
+            replying = null;
+            question = false;
+          });
+        }
+        return;
+      }
       var sticker = choice;
       if (choice == '+') {
         if (!mounted) return;
@@ -253,7 +351,11 @@ extension _ChatTools on _ChatScreenState {
       }
     } else {
       found = repo.online
-          ? await repo.search(chat.id, keyword)
+          ? await repo.search(
+              chat.id,
+              keyword,
+              kind: (key == 'study' || key == 'review') ? 'question' : null,
+            )
           : cached.reversed
                 .where(
                   (r) =>
@@ -263,6 +365,86 @@ extension _ChatTools on _ChatScreenState {
                 .toList();
     }
     if (!mounted) return;
+    final answers = <String, String>{};
+    if (key == 'study' || key == 'review') {
+      for (final m in found.where((r) => r.kind == 'question')) {
+        final id = fields(meta[m.id])['answer'];
+        if (id is! String) continue;
+        var a = cached.where((r) => r.id == id).firstOrNull;
+        if (repo.online) {
+          a = ChatMessage.decode(
+            id,
+            await repo.rest.request(repo.uid, 'GET', 'messages/${chat.id}/$id'),
+          );
+        }
+        if (a != null &&
+            !a.recalled &&
+            a.replyTo == m.id &&
+            repo.visible([a], prefs).isNotEmpty) {
+          answers[m.id] = a.content;
+        }
+      }
+    }
+    if (!mounted) return;
+    if (key == 'review') {
+      final cards = found.where((m) => answers.containsKey(m.id)).toList();
+      if (cards.isEmpty) {
+        throw const ChatFailure(
+          'Chốt một đáp án trong hội thoại để tạo thẻ tự ôn.',
+        );
+      }
+      var index = 0, known = 0, revealed = false;
+      await showDialog<void>(
+        context: context,
+        builder: (d) => StatefulBuilder(
+          builder: (c, change) => AlertDialog(
+            title: Text(
+              index == cards.length
+                  ? 'Hoàn thành lượt ôn'
+                  : 'Thẻ tự ôn · ${index + 1}/${cards.length}',
+            ),
+            content: SingleChildScrollView(
+              child: Text(
+                index == cards.length
+                    ? 'Bạn nhớ $known/${cards.length} đáp án.'
+                    : revealed
+                    ? answers[cards[index].id]!
+                    : cards[index].content,
+              ),
+            ),
+            actions: index == cards.length
+                ? [
+                    FilledButton(
+                      onPressed: () => Navigator.pop(c),
+                      child: const Text('Hoàn tất'),
+                    ),
+                  ]
+                : revealed
+                ? [
+                    for (final (label, score) in [
+                      ('Cần ôn lại', 0),
+                      ('Đã nhớ', 1),
+                    ])
+                      TextButton(
+                        onPressed: () => change(() {
+                          index++;
+                          known += score;
+                          revealed = false;
+                        }),
+                        child: Text(label),
+                      ),
+                  ]
+                : [
+                    FilledButton(
+                      onPressed: () => change(() => revealed = true),
+                      child: const Text('Lật xem đáp án'),
+                    ),
+                  ],
+          ),
+        ),
+      );
+      return;
+    }
     final shown = found.where(
       (m) => key == 'study'
           ? m.kind == 'question'
@@ -291,13 +473,7 @@ extension _ChatTools on _ChatScreenState {
                 title: Text(m.content),
                 subtitle: Text(
                   key == 'study'
-                      ? (found
-                                .where(
-                                  (r) => r.id == fields(meta[m.id])['answer'],
-                                )
-                                .firstOrNull
-                                ?.content ??
-                            'Chưa có đáp án hiển thị')
+                      ? (answers[m.id] ?? 'Chưa có đáp án hiển thị')
                       : timeLabel(m.createdAt, full: true),
                 ),
               ),

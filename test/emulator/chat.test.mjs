@@ -17,7 +17,7 @@ async function request(user, method, path, body, query) {
 async function ok(response) {
   const res = await response;
   const body = await res.text();
-  assert.equal(res.status, 200, body);
+  assert.equal(res.status, 200, new URL(res.url).pathname+' '+body);
   return JSON.parse(body);
 }
 async function denied(response) {
@@ -116,11 +116,15 @@ test('TV2 · Firebase Auth, RTDB và quyền theo hội thoại',async t=>{
     await ok(request(b,'PATCH','',{[ab]:'friends',[ba]:'friends'}));
     await ok(request(b,'PATCH','',{[ab]:null,[ba]:null}));
     for(const col of ['posts','stories']){
-      await ok(request(a,'PUT',col+'/'+unique,{author:a.localId,text:'Review',style:'checklist',createdAt:stamp}));
+      const media='feedMedia/'+col+'/'+unique;
+      await ok(request(a,'PATCH','',{[col+'/'+unique]:{author:a.localId,text:'Review',hasImage:true,bold:true,style:'checklist',createdAt:stamp},[media]:'YWJj',...(col==='stories'?{['storyIndex/'+unique]:stamp}:{})}));
+      assert.equal(await ok(request(b,'GET',media)),'YWJj');
+      if(col==='stories')assert.ok((await ok(request(b,'GET','storyIndex',undefined,{orderBy:'"$value"',startAt:String(Date.now()-86400000),limitToLast:'50'})))[unique]);
       const q={orderBy:'"createdAt"',limitToLast:'50',...(col==='stories'?{startAt:String(Date.now()-86400000)}:{})};
-      assert.ok((await ok(request(b,'GET',col,undefined,q)))[unique]);
+      if(col==='stories'){assert.equal((await ok(request(b,'GET',col+'/'+unique))).text,'Review');await denied(request(b,'GET',col,undefined,q));}else{assert.ok((await ok(request(b,'GET',col,undefined,q)))[unique]);}
       await denied(request(b,'DELETE',col+'/'+unique));
-      await ok(request(a,'DELETE',col+'/'+unique));
+      await ok(request(a,'PATCH','',{[col+'/'+unique]:null,[media]:null,...(col==='stories'?{['storyIndex/'+unique]:null}:{})}));
+      await denied(request(b,'GET',media));
     }
   });
   await t.test('T19 · các phiên độc lập, chỉ chủ tài khoản được ghi presence',async()=>{

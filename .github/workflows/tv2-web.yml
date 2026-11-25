@@ -31,6 +31,11 @@ jobs:
       - run: dart run sqflite_common_ffi_web:setup
       - run: python tools/prepare_web.py
       - run: flutter build web --release --no-pub --no-web-resources-cdn
+      - uses: actions/upload-artifact@v4
+        with:
+          name: study-chat-tv2-web
+          path: build/web/
+          retention-days: 30
       - name: Verify two browser sessions against Firebase Emulator
         env:
           TV2_BROWSER: chrome
@@ -42,11 +47,6 @@ jobs:
           server_pid=$!
           trap 'kill "$server_pid" || true' EXIT
           npx --yes firebase-tools@15.37.0 emulators:exec --only auth,database --project demo-classroom-tv2 "python tools/demo_accounts.py && node test/browser/chat.cjs"
-      - uses: actions/upload-artifact@v4
-        with:
-          name: study-chat-tv2-web
-          path: build/web/
-          retention-days: 30
   android-demo:
     runs-on: ubuntu-latest
     timeout-minutes: 30
